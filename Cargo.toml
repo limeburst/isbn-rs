@@ -5,3 +5,4 @@ authors = ["Jihyeok Seo <limeburst@ridi.com>"]
 description = "A library for handling ISBNs."
 license = "MIT"
 repository = "https://github.com/ridibooks/isbn-rs"
+edition = "2018"
