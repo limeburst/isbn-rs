@@ -80,7 +80,9 @@ impl Isbn10 {
     /// let isbn10 = Isbn10::new(0, 3, 0, 6, 4, 0, 6, 1, 5, 2);
     /// ```
     pub fn new(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8, g: u8, h: u8, i: u8, j: u8) -> Isbn10 {
-        Isbn10 { digits: [a, b, c, d, e, f, g, h, i, j] }
+        Isbn10 {
+            digits: [a, b, c, d, e, f, g, h, i, j],
+        }
     }
 
     fn calculate_check_digit(digits: &[u8]) -> u8 {
@@ -148,7 +150,9 @@ impl Isbn13 {
         l: u8,
         m: u8,
     ) -> Isbn13 {
-        Isbn13 { digits: [a, b, c, d, e, f, g, h, i, j, k, l, m] }
+        Isbn13 {
+            digits: [a, b, c, d, e, f, g, h, i, j, k, l, m],
+        }
     }
 
     fn calculate_check_digit(digits: &[u8]) -> u8 {
@@ -170,7 +174,8 @@ impl Isbn13 {
 
 impl fmt::Display for Isbn13 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let sum = self.digits
+        let sum = self
+            .digits
             .iter()
             .fold(String::new(), |acc, &d| acc + &d.to_string());
         write!(f, "{}", sum)
@@ -184,19 +189,7 @@ impl From<Isbn10> for Isbn13 {
         let c = Isbn13::calculate_check_digit(&v);
         let d = isbn10.digits;
         Isbn13::new(
-            9,
-            7,
-            8,
-            d[0],
-            d[1],
-            d[2],
-            d[3],
-            d[4],
-            d[5],
-            d[6],
-            d[7],
-            d[8],
-            c,
+            9, 7, 8, d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], c,
         )
     }
 }
@@ -229,7 +222,8 @@ struct Parser {
 
 impl Parser {
     pub fn new(s: &str) -> Parser {
-        let digits = s.replace("-", "")
+        let digits = s
+            .replace("-", "")
             .replace(" ", "")
             .chars()
             .map(|c| match c {
@@ -253,19 +247,7 @@ impl Parser {
         if check_digit == *self.digits.last().unwrap() {
             let d = &self.digits;
             Ok(Isbn13::new(
-                d[0],
-                d[1],
-                d[2],
-                d[3],
-                d[4],
-                d[5],
-                d[6],
-                d[7],
-                d[8],
-                d[9],
-                d[10],
-                d[11],
-                d[12],
+                d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12],
             ))
         } else {
             Err(IsbnError::InvalidDigit)
@@ -277,16 +259,7 @@ impl Parser {
         if check_digit == *self.digits.last().unwrap() {
             let d = &self.digits;
             Ok(Isbn10::new(
-                d[0],
-                d[1],
-                d[2],
-                d[3],
-                d[4],
-                d[5],
-                d[6],
-                d[7],
-                d[8],
-                d[9],
+                d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9],
             ))
         } else {
             Err(IsbnError::InvalidDigit)
