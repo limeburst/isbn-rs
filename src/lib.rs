@@ -15,10 +15,10 @@
 //!
 //! [International Standard Book Number]: https://www.isbn-international.org/
 
-use smallvec::SmallVec;
 use core::fmt;
 use core::num::ParseIntError;
 use core::str::FromStr;
+use smallvec::SmallVec;
 
 pub type IsbnResult<T> = Result<T, IsbnError>;
 
@@ -73,12 +73,21 @@ impl Isbn10 {
     ///
     /// let isbn10 = Isbn10::new(0, 3, 0, 6, 4, 0, 6, 1, 5, 2);
     /// ```
-    pub fn new(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8, g: u8, h: u8, i: u8, j: u8) -> IsbnResult<Isbn10> {
+    pub fn new(
+        a: u8,
+        b: u8,
+        c: u8,
+        d: u8,
+        e: u8,
+        f: u8,
+        g: u8,
+        h: u8,
+        i: u8,
+        j: u8,
+    ) -> IsbnResult<Isbn10> {
         let digits = [a, b, c, d, e, f, g, h, i, j];
         if Isbn10::calculate_check_digit(&digits) == j {
-            Ok(Isbn10 {
-                digits
-            })
+            Ok(Isbn10 { digits })
         } else {
             Err(IsbnError::InvalidChecksum)
         }
@@ -101,7 +110,7 @@ impl fmt::Display for Isbn10 {
         for x in &self.digits {
             match x {
                 10 => write!(f, "X")?,
-                _ => write!(f, "{}", x)?
+                _ => write!(f, "{}", x)?,
             }
         }
         Ok(())
@@ -148,9 +157,7 @@ impl Isbn13 {
     ) -> IsbnResult<Isbn13> {
         let digits = [a, b, c, d, e, f, g, h, i, j, k, l, m];
         if Isbn13::calculate_check_digit(&digits) == m {
-            Ok(Isbn13 {
-                digits
-            })
+            Ok(Isbn13 { digits })
         } else {
             Err(IsbnError::InvalidChecksum)
         }
@@ -186,7 +193,8 @@ impl From<Isbn10> for Isbn13 {
         let d = isbn10.digits;
         Isbn13::new(
             9, 7, 8, d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], c,
-        ).unwrap()
+        )
+        .unwrap()
     }
 }
 
@@ -205,7 +213,7 @@ pub enum IsbnError {
     /// Encountered an invalid digit while parsing.
     InvalidDigit,
     /// Failed to validate checksum
-    InvalidChecksum
+    InvalidChecksum,
 }
 
 impl From<ParseIntError> for IsbnError {
@@ -257,9 +265,7 @@ impl Parser {
         let check_digit = Isbn10::calculate_check_digit(&self.digits);
         if check_digit == *self.digits.last().unwrap() {
             let d = &self.digits;
-            Isbn10::new(
-                d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9],
-            )
+            Isbn10::new(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9])
         } else {
             Err(IsbnError::InvalidDigit)
         }
