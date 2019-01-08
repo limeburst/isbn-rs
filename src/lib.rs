@@ -1,3 +1,4 @@
+#![no_std]
 //! A library for handling [International Standard Book Number], or ISBNs.
 //!
 //! # Examples
@@ -14,9 +15,10 @@
 //!
 //! [International Standard Book Number]: https://www.isbn-international.org/
 
-use std::fmt;
-use std::num::ParseIntError;
-use std::str::FromStr;
+use smallvec::SmallVec;
+use core::fmt;
+use core::num::ParseIntError;
+use core::str::FromStr;
 
 pub type IsbnResult<T> = Result<T, IsbnError>;
 
@@ -96,11 +98,13 @@ impl Isbn10 {
 
 impl fmt::Display for Isbn10 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let sum = self.digits.iter().fold(String::new(), |acc, &d| match d {
-            10 => acc + "X",
-            _ => acc + &d.to_string(),
-        });
-        write!(f, "{}", sum)
+        for x in &self.digits {
+            match x {
+                10 => write!(f, "X")?,
+                _ => write!(f, "{}", x)?
+            }
+        }
+        Ok(())
     }
 }
 
@@ -166,17 +170,17 @@ impl Isbn13 {
 
 impl fmt::Display for Isbn13 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let sum = self
-            .digits
-            .iter()
-            .fold(String::new(), |acc, &d| acc + &d.to_string());
-        write!(f, "{}", sum)
+        for x in &self.digits {
+            write!(f, "{}", x)?;
+        }
+        Ok(())
     }
 }
 
 impl From<Isbn10> for Isbn13 {
     fn from(isbn10: Isbn10) -> Isbn13 {
-        let mut v = vec![9, 7, 8];
+        let mut v = SmallVec::<[u8; 13]>::new();
+        v.extend_from_slice(&[9, 7, 8]);
         v.extend_from_slice(&isbn10.digits[..9]);
         let c = Isbn13::calculate_check_digit(&v);
         let d = isbn10.digits;
@@ -212,7 +216,7 @@ impl From<ParseIntError> for IsbnError {
 
 #[derive(Debug, Clone)]
 struct Parser {
-    digits: Vec<u8>,
+    digits: SmallVec<[u8; 13]>,
 }
 
 impl Parser {
