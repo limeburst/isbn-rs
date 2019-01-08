@@ -218,13 +218,13 @@ struct Parser {
 impl Parser {
     pub fn new(s: &str) -> Parser {
         let digits = s
-            .replace("-", "")
-            .replace(" ", "")
             .chars()
-            .map(|c| match c {
-                'X' => 10,
-                _ => c.to_digit(10).unwrap_or(0),
-            } as u8)
+            .filter_map(|c| match c {
+                '-' => None,
+                ' ' => None,
+                'X' => Some(10u8),
+                _ => Some(c.to_digit(10).unwrap_or(0) as u8),
+            })
             .collect();
         Parser { digits }
     }
@@ -266,7 +266,7 @@ impl Parser {
 mod tests {
     use super::*;
 
-//    #[test]
+    #[test]
     fn test_from_str_isbn10() {
         // Wikipedia ISBN-10 check digit calculation example
         assert!(Isbn::from_str("0-306-40615-2").is_ok());
