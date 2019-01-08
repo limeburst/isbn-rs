@@ -30,8 +30,8 @@ pub enum Isbn {
 impl fmt::Display for Isbn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Isbn::_10(ref c) => c.fmt(f),
-            Isbn::_13(ref c) => c.fmt(f),
+            Isbn::_10(ref c) => fmt::Display::fmt(c, f),
+            Isbn::_13(ref c) => fmt::Display::fmt(c, f),
         }
     }
 }
