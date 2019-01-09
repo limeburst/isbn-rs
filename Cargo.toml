@@ -6,3 +6,7 @@ description = "A library for handling ISBNs."
 license = "MIT"
 repository = "https://github.com/ridi/isbn-rs"
 edition = "2018"
+
+[build-dependencies]
+codegen = "0.1"
+roxmltree = "0.4"

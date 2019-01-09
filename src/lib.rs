@@ -22,16 +22,18 @@ use std::fmt;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
+include!(concat!(env!("OUT_DIR"), "/generated.rs"));
+
 /// An International Standard Book Number, either ISBN10 or ISBN13.
 ///
 /// # Examples
-/// 
+///
 /// ```
 /// use isbn::{Isbn, Isbn10, Isbn13};
 ///
 /// let isbn_10 = Isbn::_10(Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4));
 /// let isbn_13 = Isbn::_13(Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5));
-/// 
+///
 /// assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
 /// assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
 /// ```
@@ -41,12 +43,31 @@ pub enum Isbn {
     _13(Isbn13),
 }
 
+struct Group {
+    agency: String,
+    segment_length: usize,
+}
+
 impl Isbn {
     /// Returns `true` if this is a valid ISBN code.
     pub fn is_valid(&self) -> bool {
         match *self {
             Isbn::_10(ref c) => c.is_valid(),
             Isbn::_13(ref c) => c.is_valid(),
+        }
+    }
+
+    pub fn hyphenate(&self) -> Result<String, IsbnError> {
+        match *self {
+            Isbn::_10(ref c) => c.hyphenate(),
+            Isbn::_13(ref c) => c.hyphenate(),
+        }
+    }
+
+    pub fn agency(&self) -> Result<String, IsbnError> {
+        match *self {
+            Isbn::_10(ref c) => c.agency(),
+            Isbn::_13(ref c) => c.agency(),
         }
     }
 }
@@ -115,6 +136,74 @@ impl Isbn10 {
     /// Returns `true` if this is a valid ISBN10 code.
     pub fn is_valid(&self) -> bool {
         Isbn10::calculate_check_digit(&self.digits) == *self.digits.last().unwrap()
+    }
+
+    fn registration_group(
+        &self,
+        registration_group_segment_legnth: usize,
+    ) -> Result<Group, IsbnError> {
+        Isbn::get_registration_group(
+            &self.group_prefix(registration_group_segment_legnth),
+            self.segment(registration_group_segment_legnth),
+        )
+    }
+
+    pub fn hyphenate(&self) -> Result<String, IsbnError> {
+        let registration_group_segment_legnth =
+            Isbn::get_ean_ucc_group("978", self.segment(0))?.segment_length;
+        let registrant_segment_length = self
+            .registration_group(registration_group_segment_legnth)?
+            .segment_length;
+        let hyphen_at = [
+            registration_group_segment_legnth,
+            registration_group_segment_legnth + registrant_segment_length,
+            9,
+        ];
+
+        let mut hyphenated = String::new();
+        for (i, character) in self.to_string().chars().enumerate() {
+            if hyphen_at.contains(&i) {
+                hyphenated.push('-')
+            }
+            hyphenated.push(character);
+        }
+        Ok(hyphenated)
+    }
+
+    pub fn agency(&self) -> Result<String, IsbnError> {
+        let registration_group_segment_legnth =
+            Isbn::get_ean_ucc_group("978", self.segment(0))?.segment_length;
+
+        Ok(self
+            .registration_group(registration_group_segment_legnth)?
+            .agency)
+    }
+
+    fn segment(&self, base: usize) -> u32 {
+        let s = format!(
+            "{}{}{}{}{}{}{}",
+            self.digits.get(base).unwrap_or(&0),
+            self.digits.get(base + 1).unwrap_or(&0),
+            self.digits.get(base + 2).unwrap_or(&0),
+            self.digits.get(base + 3).unwrap_or(&0),
+            self.digits.get(base + 4).unwrap_or(&0),
+            self.digits.get(base + 5).unwrap_or(&0),
+            self.digits.get(base + 6).unwrap_or(&0),
+        );
+        println!("{}", s);
+        s.parse().unwrap()
+    }
+
+    fn group_prefix(&self, length: usize) -> String {
+        [
+            "978",
+            &self.digits[..length]
+                .iter()
+                .map(|d| d.to_string())
+                .collect::<Vec<_>>()
+                .join(""),
+        ]
+        .join("-")
     }
 }
 
@@ -186,6 +275,84 @@ impl Isbn13 {
     pub fn is_valid(&self) -> bool {
         Isbn13::calculate_check_digit(&self.digits) == *self.digits.last().unwrap()
     }
+
+    fn ean_ucc_group(&self) -> Result<Group, IsbnError> {
+        Isbn::get_ean_ucc_group(
+            &format!("{}{}{}", self.digits[0], self.digits[1], self.digits[2]),
+            self.segment(0),
+        )
+    }
+
+    fn registration_group(
+        &self,
+        registration_group_segment_legnth: usize,
+    ) -> Result<Group, IsbnError> {
+        Isbn::get_registration_group(
+            &self.group_prefix(registration_group_segment_legnth),
+            self.segment(registration_group_segment_legnth),
+        )
+    }
+
+    pub fn hyphenate(&self) -> Result<String, IsbnError> {
+        let registration_group_segment_legnth = self.ean_ucc_group()?.segment_length;
+        let registrant_segment_length = self
+            .registration_group(registration_group_segment_legnth)?
+            .segment_length;
+        let hyphen_at = [
+            3,
+            3 + registration_group_segment_legnth,
+            3 + registration_group_segment_legnth + registrant_segment_length,
+            12,
+        ];
+
+        let mut hyphenated = String::new();
+        for (i, character) in self.to_string().chars().enumerate() {
+            if hyphen_at.contains(&i) {
+                hyphenated.push('-')
+            }
+            hyphenated.push(character);
+        }
+        Ok(hyphenated)
+    }
+
+    pub fn agency(&self) -> Result<String, IsbnError> {
+        let registration_group_segment_legnth = self.ean_ucc_group()?.segment_length;
+
+        Ok(self
+            .registration_group(registration_group_segment_legnth)?
+            .agency)
+    }
+
+    fn segment(&self, base: usize) -> u32 {
+        let s = format!(
+            "{}{}{}{}{}{}{}",
+            self.digits.get(base + 3).unwrap_or(&0),
+            self.digits.get(base + 4).unwrap_or(&0),
+            self.digits.get(base + 5).unwrap_or(&0),
+            self.digits.get(base + 6).unwrap_or(&0),
+            self.digits.get(base + 7).unwrap_or(&0),
+            self.digits.get(base + 8).unwrap_or(&0),
+            self.digits.get(base + 9).unwrap_or(&0),
+        );
+        println!("{}", s);
+        s.parse().unwrap()
+    }
+
+    fn group_prefix(&self, length: usize) -> String {
+        format!(
+            "{}-{}",
+            &self.digits[..3]
+                .iter()
+                .map(|d| d.to_string())
+                .collect::<Vec<_>>()
+                .join(""),
+            &self.digits[3..(3 + length) as usize]
+                .iter()
+                .map(|d| d.to_string())
+                .collect::<Vec<_>>()
+                .join("")
+        )
+    }
 }
 
 impl fmt::Display for Isbn13 {
@@ -224,6 +391,10 @@ pub enum IsbnError {
     InvalidLength,
     /// Encountered an invalid digit while parsing.
     InvalidDigit,
+    /// Encountered an invalid ISBN registration group.
+    InvalidGroup,
+    /// Encountered a range not defined for use at this time.
+    UndefinedRange,
 }
 
 impl From<ParseIntError> for IsbnError {
