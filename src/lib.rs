@@ -6,10 +6,10 @@
 //! ```
 //! use isbn::{Isbn, Isbn10, Isbn13};
 //!
-//! let isbn_10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4);
+//! let isbn_10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4).unwrap();
 //! assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
 //!
-//! let isbn_13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5);
+//! let isbn_13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5).unwrap();
 //! assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
 //! ```
 //!
@@ -29,8 +29,8 @@ pub type IsbnResult<T> = Result<T, IsbnError>;
 /// ```
 /// use isbn::{Isbn, Isbn10, Isbn13};
 ///
-/// let isbn_10 = Isbn::_10(Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4));
-/// let isbn_13 = Isbn::_13(Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5));
+/// let isbn_10 = Isbn::_10(Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4).unwrap());
+/// let isbn_13 = Isbn::_13(Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5).unwrap());
 ///
 /// assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
 /// assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
@@ -83,7 +83,7 @@ impl Isbn10 {
     /// ```
     /// use isbn::Isbn10;
     ///
-    /// let isbn10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4);
+    /// let isbn10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4).unwrap();
     /// ```
     pub fn new(
         a: u8,
@@ -150,7 +150,7 @@ impl Isbn13 {
     /// ```
     /// use isbn::Isbn13;
     ///
-    /// let isbn13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5);
+    /// let isbn13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5).unwrap();
     /// ```
     pub fn new(
         a: u8,
