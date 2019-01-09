@@ -8,4 +8,4 @@ repository = "https://github.com/ridi/isbn-rs"
 edition = "2018"
 
 [dependencies]
-smallvec = { version = "0.6", default-features = false }
+arrayvec = { version = "0.4", default-features = false }

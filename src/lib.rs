@@ -18,7 +18,7 @@
 use core::fmt;
 use core::num::ParseIntError;
 use core::str::FromStr;
-use smallvec::SmallVec;
+use arrayvec::ArrayVec;
 
 pub type IsbnResult<T> = Result<T, IsbnError>;
 
@@ -186,9 +186,9 @@ impl fmt::Display for Isbn13 {
 
 impl From<Isbn10> for Isbn13 {
     fn from(isbn10: Isbn10) -> Isbn13 {
-        let mut v = SmallVec::<[u8; 13]>::new();
-        v.extend_from_slice(&[9, 7, 8]);
-        v.extend_from_slice(&isbn10.digits[..9]);
+        let mut v = ArrayVec::<[u8; 13]>::new();
+        v.extend([9, 7, 8].iter().cloned());
+        v.extend(isbn10.digits[..9].iter().cloned());
         let c = Isbn13::calculate_check_digit(&v);
         let d = isbn10.digits;
         Isbn13::new(
@@ -224,7 +224,7 @@ impl From<ParseIntError> for IsbnError {
 
 #[derive(Debug, Clone)]
 struct Parser {
-    digits: SmallVec<[u8; 13]>,
+    digits: ArrayVec<[u8; 13]>,
 }
 
 impl Parser {
