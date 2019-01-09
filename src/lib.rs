@@ -6,11 +6,11 @@
 //! ```
 //! use isbn::{Isbn, Isbn10, Isbn13};
 //!
-//! let isbn_10 = Isbn::_10(Isbn10::new(0, 3, 4, 0, 0, 1, 3, 8, 1, 8).expect("Invalid ISBN"));
-//! let isbn_13 = Isbn::_13(Isbn13::new(9, 7, 8, 0, 3, 4, 0, 0, 1, 3, 8, 1, 6).expect("Invalid ISBN"));
+//! let isbn_10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4);
+//! assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
 //!
-//! assert_eq!("0-340-01381-8".parse(), Ok(isbn_10));
-//! assert_eq!("978-0-340-01381-6".parse(), Ok(isbn_13));
+//! let isbn_13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5);
+//! assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
 //! ```
 //!
 //! [International Standard Book Number]: https://www.isbn-international.org/
@@ -23,7 +23,19 @@ use arrayvec::ArrayVec;
 pub type IsbnResult<T> = Result<T, IsbnError>;
 
 /// An International Standard Book Number, either ISBN10 or ISBN13.
-#[derive(Debug, PartialEq, Copy, Clone, Hash)]
+///
+/// # Examples
+///
+/// ```
+/// use isbn::{Isbn, Isbn10, Isbn13};
+///
+/// let isbn_10 = Isbn::_10(Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4));
+/// let isbn_13 = Isbn::_13(Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5));
+///
+/// assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
+/// assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
+/// ```
+#[derive(Debug, PartialEq)]
 pub enum Isbn {
     _10(Isbn10),
     _13(Isbn13),
@@ -32,8 +44,8 @@ pub enum Isbn {
 impl fmt::Display for Isbn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Isbn::_10(ref c) => fmt::Display::fmt(c, f),
-            Isbn::_13(ref c) => fmt::Display::fmt(c, f),
+            Isbn::_10(ref c) => c.fmt(f),
+            Isbn::_13(ref c) => c.fmt(f),
         }
     }
 }
@@ -71,7 +83,7 @@ impl Isbn10 {
     /// ```
     /// use isbn::Isbn10;
     ///
-    /// let isbn10 = Isbn10::new(0, 3, 0, 6, 4, 0, 6, 1, 5, 2);
+    /// let isbn10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4);
     /// ```
     pub fn new(
         a: u8,
@@ -138,7 +150,7 @@ impl Isbn13 {
     /// ```
     /// use isbn::Isbn13;
     ///
-    /// let isbn13 = Isbn13::new(9, 7, 8, 3, 1, 6, 1, 4, 8, 4, 1, 0, 0);
+    /// let isbn13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5);
     /// ```
     pub fn new(
         a: u8,
@@ -253,9 +265,9 @@ impl Parser {
         let check_digit = Isbn13::calculate_check_digit(&self.digits);
         if check_digit == *self.digits.last().unwrap() {
             let d = &self.digits;
-            Isbn13::new(
+            Ok(Isbn13::new(
                 d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12],
-            )
+            ))
         } else {
             Err(IsbnError::InvalidDigit)
         }
@@ -265,7 +277,9 @@ impl Parser {
         let check_digit = Isbn10::calculate_check_digit(&self.digits);
         if check_digit == *self.digits.last().unwrap() {
             let d = &self.digits;
-            Isbn10::new(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9])
+            Ok(Isbn10::new(
+                d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9],
+            ))
         } else {
             Err(IsbnError::InvalidDigit)
         }
