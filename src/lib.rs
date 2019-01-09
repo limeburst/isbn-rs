@@ -1,9 +1,10 @@
+#![no_std]
 //! A library for handling [International Standard Book Number], or ISBNs.
 //!
 //! # Examples
 //!
 //! ```
-//! use isbn::{Isbn10, Isbn13};
+//! use isbn::{Isbn, Isbn10, Isbn13};
 //!
 //! let isbn_10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4);
 //! assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
@@ -14,20 +15,23 @@
 //!
 //! [International Standard Book Number]: https://www.isbn-international.org/
 
-use std::fmt;
-use std::num::ParseIntError;
-use std::str::FromStr;
+use core::fmt;
+use core::num::ParseIntError;
+use core::str::FromStr;
+use arrayvec::ArrayVec;
+
+pub type IsbnResult<T> = Result<T, IsbnError>;
 
 /// An International Standard Book Number, either ISBN10 or ISBN13.
 ///
 /// # Examples
-/// 
+///
 /// ```
 /// use isbn::{Isbn, Isbn10, Isbn13};
 ///
 /// let isbn_10 = Isbn::_10(Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4));
 /// let isbn_13 = Isbn::_13(Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5));
-/// 
+///
 /// assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
 /// assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
 /// ```
@@ -35,16 +39,6 @@ use std::str::FromStr;
 pub enum Isbn {
     _10(Isbn10),
     _13(Isbn13),
-}
-
-impl Isbn {
-    /// Returns `true` if this is a valid ISBN code.
-    pub fn is_valid(&self) -> bool {
-        match *self {
-            Isbn::_10(ref c) => c.is_valid(),
-            Isbn::_13(ref c) => c.is_valid(),
-        }
-    }
 }
 
 impl fmt::Display for Isbn {
@@ -76,7 +70,7 @@ impl FromStr for Isbn {
 }
 
 /// 10-digit ISBN format.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone, Hash)]
 pub struct Isbn10 {
     digits: [u8; 10],
 }
@@ -91,9 +85,23 @@ impl Isbn10 {
     ///
     /// let isbn10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4);
     /// ```
-    pub fn new(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8, g: u8, h: u8, i: u8, j: u8) -> Isbn10 {
-        Isbn10 {
-            digits: [a, b, c, d, e, f, g, h, i, j],
+    pub fn new(
+        a: u8,
+        b: u8,
+        c: u8,
+        d: u8,
+        e: u8,
+        f: u8,
+        g: u8,
+        h: u8,
+        i: u8,
+        j: u8,
+    ) -> IsbnResult<Isbn10> {
+        let digits = [a, b, c, d, e, f, g, h, i, j];
+        if Isbn10::calculate_check_digit(&digits) == j {
+            Ok(Isbn10 { digits })
+        } else {
+            Err(IsbnError::InvalidChecksum)
         }
     }
 
@@ -107,20 +115,17 @@ impl Isbn10 {
         let check_digit = (11 - (sum % 11)) % 11;
         check_digit as u8
     }
-
-    /// Returns `true` if this is a valid ISBN10 code.
-    pub fn is_valid(&self) -> bool {
-        Isbn10::calculate_check_digit(&self.digits) == *self.digits.last().unwrap()
-    }
 }
 
 impl fmt::Display for Isbn10 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let sum = self.digits.iter().fold(String::new(), |acc, &d| match d {
-            10 => acc + "X",
-            _ => acc + &d.to_string(),
-        });
-        write!(f, "{}", sum)
+        for x in &self.digits {
+            match x {
+                10 => write!(f, "X")?,
+                _ => write!(f, "{}", x)?,
+            }
+        }
+        Ok(())
     }
 }
 
@@ -132,7 +137,7 @@ impl FromStr for Isbn10 {
 }
 
 /// 13-digit ISBN format.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone, Hash)]
 pub struct Isbn13 {
     digits: [u8; 13],
 }
@@ -161,9 +166,12 @@ impl Isbn13 {
         k: u8,
         l: u8,
         m: u8,
-    ) -> Isbn13 {
-        Isbn13 {
-            digits: [a, b, c, d, e, f, g, h, i, j, k, l, m],
+    ) -> IsbnResult<Isbn13> {
+        let digits = [a, b, c, d, e, f, g, h, i, j, k, l, m];
+        if Isbn13::calculate_check_digit(&digits) == m {
+            Ok(Isbn13 { digits })
+        } else {
+            Err(IsbnError::InvalidChecksum)
         }
     }
 
@@ -177,32 +185,28 @@ impl Isbn13 {
         let check_digit = (10 - (sum % 10)) % 10;
         check_digit as u8
     }
-
-    /// Returns `true` if this is a valid ISBN13 code.
-    pub fn is_valid(&self) -> bool {
-        Isbn13::calculate_check_digit(&self.digits) == *self.digits.last().unwrap()
-    }
 }
 
 impl fmt::Display for Isbn13 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let sum = self
-            .digits
-            .iter()
-            .fold(String::new(), |acc, &d| acc + &d.to_string());
-        write!(f, "{}", sum)
+        for x in &self.digits {
+            write!(f, "{}", x)?;
+        }
+        Ok(())
     }
 }
 
 impl From<Isbn10> for Isbn13 {
     fn from(isbn10: Isbn10) -> Isbn13 {
-        let mut v = vec![9, 7, 8];
-        v.extend_from_slice(&isbn10.digits[..9]);
+        let mut v = ArrayVec::<[u8; 13]>::new();
+        v.extend([9, 7, 8].iter().cloned());
+        v.extend(isbn10.digits[..9].iter().cloned());
         let c = Isbn13::calculate_check_digit(&v);
         let d = isbn10.digits;
         Isbn13::new(
             9, 7, 8, d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], c,
         )
+        .unwrap()
     }
 }
 
@@ -220,6 +224,8 @@ pub enum IsbnError {
     InvalidLength,
     /// Encountered an invalid digit while parsing.
     InvalidDigit,
+    /// Failed to validate checksum
+    InvalidChecksum,
 }
 
 impl From<ParseIntError> for IsbnError {
@@ -228,22 +234,23 @@ impl From<ParseIntError> for IsbnError {
     }
 }
 
+#[derive(Debug, Clone)]
 struct Parser {
-    digits: Vec<u8>,
+    digits: ArrayVec<[u8; 13]>,
 }
 
 impl Parser {
     pub fn new(s: &str) -> Parser {
         let digits = s
-            .replace("-", "")
-            .replace(" ", "")
             .chars()
-            .map(|c| match c {
-                'X' => 10,
-                _ => c.to_digit(10).unwrap_or(0),
-            } as u8)
+            .filter_map(|c| match c {
+                '-' => None,
+                ' ' => None,
+                'X' => Some(10u8),
+                _ => Some(c.to_digit(10).unwrap_or(0) as u8),
+            })
             .collect();
-        Parser { digits: digits }
+        Parser { digits }
     }
 
     fn read_isbn(&mut self) -> Result<Isbn, IsbnError> {
@@ -258,9 +265,9 @@ impl Parser {
         let check_digit = Isbn13::calculate_check_digit(&self.digits);
         if check_digit == *self.digits.last().unwrap() {
             let d = &self.digits;
-            Ok(Isbn13::new(
+            Isbn13::new(
                 d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12],
-            ))
+            )
         } else {
             Err(IsbnError::InvalidDigit)
         }
@@ -270,9 +277,9 @@ impl Parser {
         let check_digit = Isbn10::calculate_check_digit(&self.digits);
         if check_digit == *self.digits.last().unwrap() {
             let d = &self.digits;
-            Ok(Isbn10::new(
+            Isbn10::new(
                 d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9],
-            ))
+            )
         } else {
             Err(IsbnError::InvalidDigit)
         }
