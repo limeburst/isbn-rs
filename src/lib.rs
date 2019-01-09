@@ -3,12 +3,12 @@
 //! # Examples
 //!
 //! ```
-//! use isbn::{Isbn, Isbn10, Isbn13};
+//! use isbn::{Isbn10, Isbn13};
 //!
-//! let isbn_10 = Isbn::_10(Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4));
-//! let isbn_13 = Isbn::_13(Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5));
-//!
+//! let isbn_10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4);
 //! assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
+//!
+//! let isbn_13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5);
 //! assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
 //! ```
 //!
@@ -19,6 +19,18 @@ use std::num::ParseIntError;
 use std::str::FromStr;
 
 /// An International Standard Book Number, either ISBN10 or ISBN13.
+///
+/// # Examples
+/// 
+/// ```
+/// use isbn::{Isbn, Isbn10, Isbn13};
+///
+/// let isbn_10 = Isbn::_10(Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4));
+/// let isbn_13 = Isbn::_13(Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5));
+/// 
+/// assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
+/// assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
+/// ```
 #[derive(Debug, PartialEq)]
 pub enum Isbn {
     _10(Isbn10),
