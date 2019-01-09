@@ -5,11 +5,11 @@
 //! ```
 //! use isbn::{Isbn, Isbn10, Isbn13};
 //!
-//! let isbn_10 = Isbn::_10(Isbn10::new(0, 3, 4, 0, 0, 1, 3, 8, 1, 8));
-//! let isbn_13 = Isbn::_13(Isbn13::new(9, 7, 8, 0, 3, 4, 0, 0, 1, 3, 8, 1, 6));
+//! let isbn_10 = Isbn::_10(Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4));
+//! let isbn_13 = Isbn::_13(Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5));
 //!
-//! assert_eq!("0-340-01381-8".parse(), Ok(isbn_10));
-//! assert_eq!("978-0-340-01381-6".parse(), Ok(isbn_13));
+//! assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
+//! assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
 //! ```
 //!
 //! [International Standard Book Number]: https://www.isbn-international.org/
@@ -77,7 +77,7 @@ impl Isbn10 {
     /// ```
     /// use isbn::Isbn10;
     ///
-    /// let isbn10 = Isbn10::new(0, 3, 0, 6, 4, 0, 6, 1, 5, 2);
+    /// let isbn10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4);
     /// ```
     pub fn new(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8, g: u8, h: u8, i: u8, j: u8) -> Isbn10 {
         Isbn10 {
@@ -133,7 +133,7 @@ impl Isbn13 {
     /// ```
     /// use isbn::Isbn13;
     ///
-    /// let isbn13 = Isbn13::new(9, 7, 8, 3, 1, 6, 1, 4, 8, 4, 1, 0, 0);
+    /// let isbn13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5);
     /// ```
     pub fn new(
         a: u8,
