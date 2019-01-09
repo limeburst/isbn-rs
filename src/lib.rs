@@ -190,7 +190,6 @@ impl Isbn10 {
             self.digits.get(base + 5).unwrap_or(&0),
             self.digits.get(base + 6).unwrap_or(&0),
         );
-        println!("{}", s);
         s.parse().unwrap()
     }
 
@@ -334,7 +333,6 @@ impl Isbn13 {
             self.digits.get(base + 8).unwrap_or(&0),
             self.digits.get(base + 9).unwrap_or(&0),
         );
-        println!("{}", s);
         s.parse().unwrap()
     }
 
