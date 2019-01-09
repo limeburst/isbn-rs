@@ -6,6 +6,3 @@ description = "A library for handling ISBNs."
 license = "MIT"
 repository = "https://github.com/ridi/isbn-rs"
 edition = "2018"
-
-[dependencies]
-smallvec = { version = "0.6", default-features = false }
