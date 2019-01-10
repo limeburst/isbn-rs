@@ -180,11 +180,9 @@ impl Isbn10 {
     }
 
     fn segment(&self, base: usize) -> u32 {
-        let mut s = 0;
-        for i in 0..7 {
-            s += (*self.digits.get(base + i).unwrap_or(&0) as u32) * 10_u32.pow(6 - i as u32)
-        }
-        s
+        (0..7).fold(0, |s, i| {
+            s + (*self.digits.get(base + i).unwrap_or(&0) as u32) * 10_u32.pow(6 - i as u32)
+        })
     }
 
     fn group_prefix(&self, length: usize) -> String {
@@ -317,11 +315,9 @@ impl Isbn13 {
     }
 
     fn segment(&self, base: usize) -> u32 {
-        let mut s = 0;
-        for i in 3..9 {
-            s += (*self.digits.get(base + i).unwrap_or(&0) as u32) * 10_u32.pow(9 - i as u32)
-        }
-        s
+        (3..9).fold(0, |s, i| {
+            s + (*self.digits.get(base + i).unwrap_or(&0) as u32) * 10_u32.pow(9 - i as u32)
+        })
     }
 
     fn group_prefix(&self, length: usize) -> String {
