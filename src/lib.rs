@@ -180,17 +180,11 @@ impl Isbn10 {
     }
 
     fn segment(&self, base: usize) -> u32 {
-        let s = format!(
-            "{}{}{}{}{}{}{}",
-            self.digits.get(base).unwrap_or(&0),
-            self.digits.get(base + 1).unwrap_or(&0),
-            self.digits.get(base + 2).unwrap_or(&0),
-            self.digits.get(base + 3).unwrap_or(&0),
-            self.digits.get(base + 4).unwrap_or(&0),
-            self.digits.get(base + 5).unwrap_or(&0),
-            self.digits.get(base + 6).unwrap_or(&0),
-        );
-        s.parse().unwrap()
+        let mut s = 0;
+        for i in 0..7 {
+            s += (*self.digits.get(base + i).unwrap_or(&0) as u32) * 10_u32.pow(6 - i as u32)
+        }
+        s
     }
 
     fn group_prefix(&self, length: usize) -> String {
@@ -323,17 +317,11 @@ impl Isbn13 {
     }
 
     fn segment(&self, base: usize) -> u32 {
-        let s = format!(
-            "{}{}{}{}{}{}{}",
-            self.digits.get(base + 3).unwrap_or(&0),
-            self.digits.get(base + 4).unwrap_or(&0),
-            self.digits.get(base + 5).unwrap_or(&0),
-            self.digits.get(base + 6).unwrap_or(&0),
-            self.digits.get(base + 7).unwrap_or(&0),
-            self.digits.get(base + 8).unwrap_or(&0),
-            self.digits.get(base + 9).unwrap_or(&0),
-        );
-        s.parse().unwrap()
+        let mut s = 0;
+        for i in 3..9 {
+            s += (*self.digits.get(base + i).unwrap_or(&0) as u32) * 10_u32.pow(9 - i as u32)
+        }
+        s
     }
 
     fn group_prefix(&self, length: usize) -> String {
