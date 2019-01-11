@@ -55,14 +55,6 @@ struct Group<'a> {
 }
 
 impl Isbn {
-    /// Returns `true` if this is a valid ISBN code.
-    pub fn is_valid(&self) -> bool {
-        match *self {
-            Isbn::_10(ref c) => c.is_valid(),
-            Isbn::_13(ref c) => c.is_valid(),
-        }
-    }
-
     pub fn hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
         match *self {
             Isbn::_10(ref c) => c.hyphenate(),
@@ -163,11 +155,6 @@ impl Isbn10 {
             .sum();
         let check_digit = (11 - (sum % 11)) % 11;
         check_digit as u8
-    }
-
-    /// Returns `true` if this is a valid ISBN10 code.
-    pub fn is_valid(&self) -> bool {
-        Isbn10::calculate_check_digit(&self.digits) == *self.digits.last().unwrap()
     }
 
     pub fn hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
@@ -281,11 +268,6 @@ impl Isbn13 {
             .sum();
         let check_digit = (10 - (sum % 10)) % 10;
         check_digit as u8
-    }
-
-    /// Returns `true` if this is a valid ISBN13 code.
-    pub fn is_valid(&self) -> bool {
-        Isbn13::calculate_check_digit(&self.digits) == *self.digits.last().unwrap()
     }
 
     fn ean_ucc_group(&self) -> Result<Group, IsbnError> {
