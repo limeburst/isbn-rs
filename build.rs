@@ -6,19 +6,21 @@ use std::path::Path;
 use codegen::{Block, Function, Scope};
 use roxmltree::{Document, Node};
 
+/// EAN.UCC prefix or registration group.
 struct Group {
     agency: String,
     prefix: String,
     rules: Vec<Rule>,
 }
 
+/// Range length rule.
 struct Rule {
     min: u32,
     max: u32,
     length: usize,
 }
 
-/// Parse Registration Group and Registrant range length rules.
+/// Parse registration group and registrant range length rules.
 fn parse_rules(group: Node) -> Vec<Rule> {
     group
         .descendants()
@@ -52,7 +54,7 @@ fn parse_rules(group: Node) -> Vec<Rule> {
         .collect()
 }
 
-/// Parse EAN.UCC and Registration Group element.
+/// Parse EAN.UCC prefix and registration group element.
 fn parse_group(group: Node) -> Group {
     let prefix = group
         .descendants()
@@ -77,6 +79,7 @@ fn parse_group(group: Node) -> Group {
     }
 }
 
+/// Generate code for EAN.UCC or registration group lookup.
 fn codegen_find_group(name: &str, groups: Vec<Group>) -> Function {
     let mut fn_get_group = Function::new(name);
     fn_get_group.arg("prefix", "&str");

@@ -56,19 +56,19 @@ struct Group<'a> {
 
 impl Isbn {
     /// Hyphenate an ISBN into its parts:
-    /// 
+    ///
     /// * GS1 Prefix (ISBN-13 only)
     /// * Registration group
     /// * Registrant
     /// * Publication
     /// * Check digit
-    /// 
+    ///
     /// ```
     /// use isbn::{Isbn, Isbn10, Isbn13};
     ///
     /// let isbn_10 = Isbn::_10(Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4).unwrap());
     /// let isbn_13 = Isbn::_13(Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5).unwrap());
-    /// 
+    ///
     /// assert_eq!(isbn_10.hyphenate().unwrap().as_str(), "89-6626-126-4");
     /// assert_eq!(isbn_13.hyphenate().unwrap().as_str(), "978-1-4920-6766-5");
     /// ```
@@ -80,13 +80,13 @@ impl Isbn {
     }
 
     /// Retrieve the name of the registration group.
-    /// 
+    ///
     /// ```
     /// use isbn::{Isbn, Isbn10, Isbn13};
-    /// 
+    ///
     /// let isbn_10 = Isbn::_10(Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4).unwrap());
     /// let isbn_13 = Isbn::_13(Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5).unwrap());
-    /// 
+    ///
     /// assert_eq!(isbn_10.registration_group(), Ok("Korea, Republic"));
     /// assert_eq!(isbn_13.registration_group(), Ok("English language"));
     /// ```
@@ -204,15 +204,15 @@ impl Isbn10 {
     }
 
     /// Hyphenate an ISBN-10 into its parts:
-    /// 
+    ///
     /// * Registration group
     /// * Registrant
     /// * Publication
     /// * Check digit
-    /// 
+    ///
     /// ```
     /// use isbn::Isbn10;
-    /// 
+    ///
     /// let isbn_10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4).unwrap();
     /// assert_eq!(isbn_10.hyphenate().unwrap().as_str(), "89-6626-126-4");
     /// ```
@@ -234,10 +234,10 @@ impl Isbn10 {
     }
 
     /// Retrieve the name of the registration group.
-    /// 
+    ///
     /// ```
     /// use isbn::Isbn10;
-    /// 
+    ///
     /// let isbn_10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4).unwrap();
     /// assert_eq!(isbn_10.registration_group(), Ok("Korea, Republic"));
     /// ```
@@ -341,16 +341,16 @@ impl Isbn13 {
     }
 
     /// Hyphenate an ISBN-13 into its parts:
-    /// 
+    ///
     /// * GS1 Prefix
     /// * Registration group
     /// * Registrant
     /// * Publication
     /// * Check digit
-    /// 
+    ///
     /// ```
     /// use isbn::Isbn13;
-    /// 
+    ///
     /// let isbn_13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5).unwrap();
     /// assert_eq!(isbn_13.hyphenate().unwrap().as_str(), "978-1-4920-6766-5");
     /// ```
@@ -372,10 +372,10 @@ impl Isbn13 {
     }
 
     /// Retrieve the name of the registration group.
-    /// 
+    ///
     /// ```
     /// use isbn::Isbn13;
-    /// 
+    ///
     /// let isbn_13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5).unwrap();
     /// assert_eq!(isbn_13.registration_group(), Ok("English language"));
     /// ```
