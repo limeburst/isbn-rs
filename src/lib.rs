@@ -4,7 +4,7 @@
 //! # Examples
 //!
 //! ```
-//! use isbn::{Isbn, Isbn10, Isbn13};
+//! use isbn::{Isbn10, Isbn13};
 //!
 //! let isbn_10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4).unwrap();
 //! assert_eq!(isbn_10.hyphenate().unwrap().as_str(), "89-6626-126-4");
@@ -180,7 +180,6 @@ impl Isbn10 {
     /// use isbn::{Isbn10, Isbn13};
     ///
     /// let isbn_13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5).unwrap();
-    ///
     /// assert_eq!(Isbn10::try_from(isbn_13), "1-4920-6766-0".parse());
     /// ```
     pub fn try_from(isbn13: Isbn13) -> IsbnResult<Self> {
