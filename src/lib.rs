@@ -8,12 +8,12 @@
 //!
 //! let isbn_10 = Isbn10::new(8, 9, 6, 6, 2, 6, 1, 2, 6, 4).unwrap();
 //! assert_eq!(isbn_10.hyphenate().unwrap().as_str(), "89-6626-126-4");
-//! assert_eq!(isbn_10.agency(), Ok("Korea, Republic"));
+//! assert_eq!(isbn_10.registration_group(), Ok("Korea, Republic"));
 //! assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
 //!
 //! let isbn_13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5).unwrap();
 //! assert_eq!(isbn_13.hyphenate().unwrap().as_str(), "978-1-4920-6766-5");
-//! assert_eq!(isbn_13.agency(), Ok("English language"));
+//! assert_eq!(isbn_13.registration_group(), Ok("English language"));
 //! assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
 //! ```
 //!
@@ -50,7 +50,7 @@ pub enum Isbn {
 }
 
 struct Group<'a> {
-    agency: &'a str,
+    name: &'a str,
     segment_length: usize,
 }
 
@@ -62,10 +62,10 @@ impl Isbn {
         }
     }
 
-    pub fn agency(&self) -> Result<&str, IsbnError> {
+    pub fn registration_group(&self) -> Result<&str, IsbnError> {
         match *self {
-            Isbn::_10(ref c) => c.agency(),
-            Isbn::_13(ref c) => c.agency(),
+            Isbn::_10(ref c) => c.registration_group(),
+            Isbn::_13(ref c) => c.registration_group(),
         }
     }
 }
@@ -193,7 +193,7 @@ impl Isbn10 {
         Ok(hyphenate(&self.digits, &hyphen_at))
     }
 
-    pub fn agency(&self) -> Result<&str, IsbnError> {
+    pub fn registration_group(&self) -> Result<&str, IsbnError> {
         let registration_group_segment_length =
             Isbn::get_ean_ucc_group("978", self.segment(0))?.segment_length;
 
@@ -201,7 +201,7 @@ impl Isbn10 {
             &self.group_prefix(registration_group_segment_length),
             self.segment(registration_group_segment_length),
         )?
-        .agency)
+        .name)
     }
 
     fn segment(&self, base: usize) -> u32 {
@@ -309,14 +309,14 @@ impl Isbn13 {
         Ok(hyphenate(&self.digits, &hyphen_at))
     }
 
-    pub fn agency(&self) -> Result<&str, IsbnError> {
+    pub fn registration_group(&self) -> Result<&str, IsbnError> {
         let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
 
         Ok(Isbn::get_registration_group(
             &self.group_prefix(registration_group_segment_length),
             self.segment(registration_group_segment_length),
         )?
-        .agency)
+        .name)
     }
 
     fn segment(&self, base: usize) -> u32 {
