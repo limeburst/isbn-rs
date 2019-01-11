@@ -83,7 +83,7 @@ fn codegen_find_group(name: &str, groups: Vec<Group>) -> Function {
     let mut fn_get_group = Function::new(name);
     fn_get_group.arg("prefix", "&str");
     fn_get_group.arg("segment", "u32");
-    fn_get_group.ret("Result<Group, IsbnError>");
+    fn_get_group.ret("Result<Group<'static>, IsbnError>");
 
     let mut match_prefix = Block::new("match prefix");
     for group in groups {
@@ -103,7 +103,7 @@ fn codegen_find_group(name: &str, groups: Vec<Group>) -> Function {
         let_length_eq_match_segment.after(";");
 
         let mut ok_group = Block::new("Ok(Group");
-        ok_group.line(format!("agency: \"{}\".to_string(),", group.agency));
+        ok_group.line(format!("agency: \"{}\",", group.agency));
         ok_group.line("segment_length: length?");
         ok_group.after(")");
 
