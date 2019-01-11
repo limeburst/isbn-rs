@@ -192,8 +192,7 @@ impl Isbn10 {
     }
 
     fn group_prefix(&self, length: usize) -> ArrayString<[u8; 17]> {
-        let isbn_13 = Isbn13::from(*self);
-        isbn_13.group_prefix(length)
+        Isbn13::from(*self).group_prefix(length)
     }
 }
 
