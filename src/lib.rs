@@ -285,7 +285,7 @@ impl Isbn13 {
     }
 
     fn ean_ucc_group(&self) -> Result<Group, IsbnError> {
-        let mut s = ArrayString::<[u8; 100]>::new();
+        let mut s = ArrayString::<[u8; 3]>::new();
         for i in 0..3 {
             s.push(char::from_digit(self.digits[i].into(), 10).unwrap());
         }
