@@ -146,6 +146,25 @@ impl Isbn10 {
         }
     }
 
+    /// Convert ISBN-13 to ISBN-10, if applicable.
+    ///
+    /// ```
+    /// use isbn::{Isbn10, Isbn13};
+    ///
+    /// let isbn_13 = Isbn13::new(9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5).unwrap();
+    ///
+    /// assert_eq!(Isbn10::try_from(isbn_13), "1-4920-6766-0".parse());
+    /// ```
+    pub fn try_from(isbn13: Isbn13) -> IsbnResult<Self> {
+        let d = isbn13.digits;
+        if d[..3] != [9, 7, 8] {
+            Err(IsbnError::InvalidConversion)
+        } else {
+            let c = Isbn10::calculate_check_digit(&isbn13.digits[3..]);
+            Isbn10::new(d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], c)
+        }
+    }
+
     fn calculate_check_digit(digits: &[u8]) -> u8 {
         let sum: usize = digits
             .iter()
@@ -354,6 +373,8 @@ pub enum IsbnError {
     UndefinedRange,
     /// Failed to validate checksum.
     InvalidChecksum,
+    /// Failed to convert to ISBN10.
+    InvalidConversion,
 }
 
 impl From<ParseIntError> for IsbnError {
