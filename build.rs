@@ -6,14 +6,12 @@ use std::path::Path;
 use codegen::{Block, Function, Scope};
 use roxmltree::{Document, Node};
 
-#[derive(Clone)]
 struct Group {
     agency: String,
     prefix: String,
     rules: Vec<Rule>,
 }
 
-#[derive(Clone)]
 struct Rule {
     min: u32,
     max: u32,
