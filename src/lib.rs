@@ -191,13 +191,9 @@ impl Isbn10 {
         })
     }
 
-    fn group_prefix(&self, length: usize) -> ArrayString<[u8; 100]> {
-        let mut s = ArrayString::<[u8; 100]>::new();
-        s.push_str("978-");
-        for i in 0..length {
-            s.push(char::from_digit(self.digits[i].into(), 10).unwrap());
-        }
-        s
+    fn group_prefix(&self, length: usize) -> ArrayString<[u8; 17]> {
+        let isbn_13 = Isbn13::from(*self);
+        isbn_13.group_prefix(length)
     }
 }
 
@@ -311,16 +307,8 @@ impl Isbn13 {
         })
     }
 
-    fn group_prefix(&self, length: usize) -> ArrayString<[u8; 100]> {
-        let mut s = ArrayString::<[u8; 100]>::new();
-        for i in 0..3 {
-            s.push(char::from_digit(self.digits[i].into(), 10).unwrap());
-        }
-        s.push('-');
-        for i in 3..(3 + length) {
-            s.push(char::from_digit(self.digits[i].into(), 10).unwrap());
-        }
-        s
+    fn group_prefix(&self, length: usize) -> ArrayString<[u8; 17]> {
+        hyphenate(&self.digits[0..length + 3], &[3])
     }
 }
 
