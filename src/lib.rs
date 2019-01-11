@@ -418,9 +418,7 @@ impl Parser {
         let check_digit = Isbn10::calculate_check_digit(&self.digits);
         if check_digit == *self.digits.last().unwrap() {
             let d = &self.digits;
-            Isbn10::new(
-                d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9],
-            )
+            Isbn10::new(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9])
         } else {
             Err(IsbnError::InvalidDigit)
         }
