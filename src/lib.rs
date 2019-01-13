@@ -254,7 +254,7 @@ impl Isbn10 {
 
     fn segment(&self, base: usize) -> u32 {
         (0..7).fold(0, |s, i| {
-            s + (*self.digits.get(base + i).unwrap_or(&0) as u32) * 10_u32.pow(6 - i as u32)
+            s + u32::from(*self.digits.get(base + i).unwrap_or(&0)) * 10_u32.pow(6 - i as u32)
         })
     }
 
@@ -391,7 +391,7 @@ impl Isbn13 {
 
     fn segment(&self, base: usize) -> u32 {
         (3..9).fold(0, |s, i| {
-            s + (*self.digits.get(base + i).unwrap_or(&0) as u32) * 10_u32.pow(9 - i as u32)
+            s + u32::from(*self.digits.get(base + i).unwrap_or(&0)) * 10_u32.pow(9 - i as u32)
         })
     }
 
