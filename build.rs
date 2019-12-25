@@ -94,10 +94,10 @@ fn codegen_find_group(name: &str, groups: Vec<Group>) -> Function {
         for rule in &group.rules {
             let_length_eq_match_segment.line(match rule.length {
                 0 => format!(
-                    "{} ... {} => Err(IsbnError::UndefinedRange),",
+                    "{} ..= {} => Err(IsbnError::UndefinedRange),",
                     rule.min, rule.max
                 ),
-                _ => format!("{} ... {} => Ok({}),", rule.min, rule.max, rule.length),
+                _ => format!("{} ..= {} => Ok({}),", rule.min, rule.max, rule.length),
             });
         }
         let_length_eq_match_segment.line("_ => Err(IsbnError::InvalidGroup)");
