@@ -447,6 +447,24 @@ pub enum IsbnError {
     InvalidConversion,
 }
 
+impl fmt::Display for IsbnError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            IsbnError::InvalidLength => write!(
+                f,
+                "The given string is too short or too long to be an ISBN."
+            ),
+            IsbnError::InvalidDigit => write!(f, "Encountered an invalid digit while parsing."),
+            IsbnError::InvalidGroup => write!(f, "Encountered an invalid ISBN registration group."),
+            IsbnError::UndefinedRange => {
+                write!(f, "Encountered a range not defined for use at this time.")
+            }
+            IsbnError::InvalidChecksum => write!(f, "Failed to validate checksum."),
+            IsbnError::InvalidConversion => write!(f, "Failed to convert to ISBN10."),
+        }
+    }
+}
+
 impl From<ParseIntError> for IsbnError {
     fn from(_: ParseIntError) -> Self {
         IsbnError::InvalidDigit
