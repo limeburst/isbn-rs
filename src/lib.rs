@@ -265,31 +265,16 @@ impl Isbn10 {
 
 impl fmt::Display for Isbn10 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fn convert(d: u8) -> u8 {
+        fn convert(d: u8) -> char {
             if d < 10 {
-                d + 48
+                ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'][d as usize]
             } else {
-                'X' as u8
+                'X'
             }
         }
-        let s = self.digits;
-        let s = [
-            convert(s[0]),
-            convert(s[1]),
-            convert(s[2]),
-            convert(s[3]),
-            convert(s[4]),
-            convert(s[5]),
-            convert(s[6]),
-            convert(s[7]),
-            convert(s[8]),
-            convert(s[9]),
-        ];
-        if let Ok(s) = ArrayString::from_byte_string(&s) {
-            write!(f, "{}", s)
-        } else {
-            Ok(())
-        }
+        let mut s = ArrayString::<[u8; 10]>::new();
+        self.digits.iter().for_each(|&c| s.push(convert(c)));
+        write!(f, "{}", s)
     }
 }
 
@@ -420,34 +405,16 @@ impl Isbn13 {
 
 impl fmt::Display for Isbn13 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fn convert(d: u8) -> u8 {
+        fn convert(d: u8) -> char {
             if d < 10 {
-                d + 48
+                ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'][d as usize]
             } else {
-                'X' as u8
+                'X'
             }
         }
-        let s = self.digits;
-        let s = [
-            convert(s[0]),
-            convert(s[1]),
-            convert(s[2]),
-            convert(s[3]),
-            convert(s[4]),
-            convert(s[5]),
-            convert(s[6]),
-            convert(s[7]),
-            convert(s[8]),
-            convert(s[9]),
-            convert(s[10]),
-            convert(s[11]),
-            convert(s[12]),
-        ];
-        if let Ok(s) = ArrayString::from_byte_string(&s) {
-            write!(f, "{}", s)
-        } else {
-            Ok(())
-        }
+        let mut s = ArrayString::<[u8; 13]>::new();
+        self.digits.iter().for_each(|&c| s.push(convert(c)));
+        write!(f, "{}", s)
     }
 }
 
