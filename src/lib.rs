@@ -265,13 +265,28 @@ impl Isbn10 {
 
 impl fmt::Display for Isbn10 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for x in &self.digits {
-            match x {
-                10 => write!(f, "X")?,
-                _ => write!(f, "{}", x)?,
+        fn convert(d: u8) -> u8 {
+            if d < 10 {
+                d + 48
+            } else {
+                'X' as u8
             }
         }
-        Ok(())
+        let s = self.digits;
+        let s = [
+            convert(s[0]),
+            convert(s[1]),
+            convert(s[2]),
+            convert(s[3]),
+            convert(s[4]),
+            convert(s[5]),
+            convert(s[6]),
+            convert(s[7]),
+            convert(s[8]),
+            convert(s[9]),
+        ];
+        let s = ArrayString::from_byte_string(&s).unwrap();
+        write!(f, "{}", s)
     }
 }
 
@@ -402,10 +417,32 @@ impl Isbn13 {
 
 impl fmt::Display for Isbn13 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for x in &self.digits {
-            write!(f, "{}", x)?;
+        fn convert(d: u8) -> u8 {
+            if d < 10 {
+                d + 48
+            } else {
+                'X' as u8
+            }
         }
-        Ok(())
+        let s = self.digits;
+        let s = [
+            convert(s[0]),
+            convert(s[1]),
+            convert(s[2]),
+            convert(s[3]),
+            convert(s[4]),
+            convert(s[5]),
+            convert(s[6]),
+            convert(s[7]),
+            convert(s[8]),
+            convert(s[9]),
+            convert(s[10]),
+            convert(s[11]),
+            convert(s[12]),
+        ];
+        let s = ArrayString::from_byte_string(&s).unwrap();
+
+        write!(f, "{}", s)
     }
 }
 
