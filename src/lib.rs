@@ -285,8 +285,11 @@ impl fmt::Display for Isbn10 {
             convert(s[8]),
             convert(s[9]),
         ];
-        let s = ArrayString::from_byte_string(&s).unwrap();
-        write!(f, "{}", s)
+        if let Ok(s) = ArrayString::from_byte_string(&s) {
+            write!(f, "{}", s)
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -440,9 +443,11 @@ impl fmt::Display for Isbn13 {
             convert(s[11]),
             convert(s[12]),
         ];
-        let s = ArrayString::from_byte_string(&s).unwrap();
-
-        write!(f, "{}", s)
+        if let Ok(s) = ArrayString::from_byte_string(&s) {
+            write!(f, "{}", s)
+        } else {
+            Ok(())
+        }
     }
 }
 
