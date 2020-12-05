@@ -167,7 +167,9 @@ impl Isbn10 {
         j: u8,
     ) -> IsbnResult<Isbn10> {
         let digits = [a, b, c, d, e, f, g, h, i, j];
-        if Isbn10::calculate_check_digit(&digits) == j {
+        if digits[..9].iter().any(|d| *d > 9) || digits[9] > 10 {
+            Err(IsbnError::DigitTooLarge)
+        } else if Isbn10::calculate_check_digit(&digits) == j {
             Ok(Isbn10 { digits })
         } else {
             Err(IsbnError::InvalidChecksum)
@@ -314,7 +316,9 @@ impl Isbn13 {
         m: u8,
     ) -> IsbnResult<Isbn13> {
         let digits = [a, b, c, d, e, f, g, h, i, j, k, l, m];
-        if Isbn13::calculate_check_digit(&digits) == m {
+        if digits.iter().any(|d| *d > 9) {
+            Err(IsbnError::DigitTooLarge)
+        } else if Isbn13::calculate_check_digit(&digits) == m {
             Ok(Isbn13 { digits })
         } else {
             Err(IsbnError::InvalidChecksum)
@@ -445,6 +449,8 @@ pub enum IsbnError {
     InvalidChecksum,
     /// Failed to convert to ISBN10.
     InvalidConversion,
+    /// A body digit exceeded 9, or the ISBN10 check digit was larger than 10.
+    DigitTooLarge,
 }
 
 impl fmt::Display for IsbnError {
@@ -461,6 +467,7 @@ impl fmt::Display for IsbnError {
             }
             IsbnError::InvalidChecksum => write!(f, "Failed to validate checksum."),
             IsbnError::InvalidConversion => write!(f, "Failed to convert to ISBN10."),
+            IsbnError::DigitTooLarge => write!(f, "A supplied digit was larger than 9, or the ISBN10 check digit was larger than 10."),
         }
     }
 }
