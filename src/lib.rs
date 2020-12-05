@@ -122,7 +122,7 @@ impl From<Isbn13> for Isbn {
 impl FromStr for Isbn {
     type Err = IsbnError;
     fn from_str(s: &str) -> Result<Isbn, IsbnError> {
-        Parser::new(s).read_isbn()
+        Parser::new(s)?.read_isbn()
     }
 }
 
@@ -278,7 +278,7 @@ impl fmt::Display for Isbn10 {
 impl FromStr for Isbn10 {
     type Err = IsbnError;
     fn from_str(s: &str) -> Result<Isbn10, IsbnError> {
-        Parser::new(s).read_isbn10()
+        Parser::new(s)?.read_isbn10()
     }
 }
 
@@ -426,7 +426,7 @@ impl From<Isbn10> for Isbn13 {
 impl FromStr for Isbn13 {
     type Err = IsbnError;
     fn from_str(s: &str) -> Result<Isbn13, IsbnError> {
-        Parser::new(s).read_isbn13()
+        Parser::new(s)?.read_isbn13()
     }
 }
 
@@ -471,23 +471,29 @@ impl From<ParseIntError> for IsbnError {
     }
 }
 
+impl From<CapacityError<u8>> for IsbnError {
+    fn from(_: CapacityError<u8>) -> Self {
+        IsbnError::InvalidLength
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Parser {
     digits: ArrayVec<[u8; 13]>,
 }
 
 impl Parser {
-    pub fn new(s: &str) -> Parser {
-        let digits = s
-            .chars()
-            .filter_map(|c| match c {
-                '-' => None,
-                ' ' => None,
-                'X' => Some(10u8),
-                _ => Some(c.to_digit(10).unwrap_or(0) as u8),
-            })
-            .collect();
-        Parser { digits }
+    pub fn new(s: &str) -> Result<Parser, IsbnError> {
+        let mut digits = ArrayVec::new();
+        for c in s.chars() {
+            match c {
+                '-' | ' ' => {},
+                'X' => digits.try_push(10)?,
+                '0'..='9' => digits.try_push(c.to_digit(10).unwrap() as u8)?,
+                _ => return Err(IsbnError::InvalidDigit),
+            }
+        }
+        Ok(Parser { digits })
     }
 
     fn read_isbn(&mut self) -> Result<Isbn, IsbnError> {
@@ -554,5 +560,13 @@ mod tests {
 
         // Wikipedia ISBN-13 check digit calculation example
         assert!(Isbn13::from_str("978-0-306-40615-7").is_ok());
+    }
+    
+    #[test]
+    fn test_invalid_isbn_strings_no_panic() {
+        assert!(Isbn::from_str("L").is_err());
+        assert!(Isbn::from_str("").is_err());
+        assert!(Isbn::from_str("01234567890123456789").is_err());
+        assert!(Isbn::from_str("ⱧňᚥɂᛢĞžᚪ©ᛟƚ¶G").is_err());
     }
 }
