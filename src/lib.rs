@@ -590,5 +590,17 @@ mod tests {
         assert!(Isbn::from_str("").is_err());
         assert!(Isbn::from_str("01234567890123456789").is_err());
         assert!(Isbn::from_str("ⱧňᚥɂᛢĞžᚪ©ᛟƚ¶G").is_err());
+
+        assert!(Isbn10::from_str("").is_err());
+        assert!(Isbn10::from_str("01234567890").is_err());
+        assert!(Isbn10::from_str("01234567X9").is_err());
+        assert!(Isbn10::from_str("012345678").is_err());
+
+        assert!(Isbn13::from_str("").is_err());
+        assert!(Isbn13::from_str("012345678901X").is_err());
+        assert!(Isbn13::from_str("01234567890X2").is_err());
+        assert!(Isbn13::from_str("012345678").is_err());
+        assert!(Isbn13::from_str("0123456789012345").is_err());
+
     }
 }
