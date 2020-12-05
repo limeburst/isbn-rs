@@ -492,7 +492,7 @@ impl Parser {
                 '-' | ' ' => {},
                 'X' => if digits.len() == 9 {
                     has_x = true;
-                    digits.try_push(10)?;
+                    digits.push(10);
                 } else {
                     return Err(IsbnError::InvalidDigit);
                 },
