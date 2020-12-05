@@ -485,14 +485,26 @@ struct Parser {
 impl Parser {
     pub fn new(s: &str) -> Result<Parser, IsbnError> {
         let mut digits = ArrayVec::new();
+        let mut has_x = false;
+
         for c in s.chars() {
             match c {
                 '-' | ' ' => {},
-                'X' => digits.try_push(10)?,
-                '0'..='9' => digits.try_push(c.to_digit(10).unwrap() as u8)?,
+                'X' => if digits.len() == 9 {
+                    has_x = true;
+                    digits.try_push(10)?;
+                } else {
+                    return Err(IsbnError::InvalidDigit);
+                },
+                '0'..='9' => if has_x {
+                    return Err(IsbnError::InvalidDigit);
+                } else {
+                    digits.try_push(c.to_digit(10).unwrap() as u8)?
+                },
                 _ => return Err(IsbnError::InvalidDigit),
             }
         }
+
         Ok(Parser { digits })
     }
 
