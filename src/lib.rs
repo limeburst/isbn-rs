@@ -24,7 +24,7 @@ use core::fmt;
 use core::num::ParseIntError;
 use core::str::FromStr;
 
-use arrayvec::{ArrayString, ArrayVec};
+use arrayvec::{ArrayString, ArrayVec, CapacityError};
 
 pub type IsbnResult<T> = Result<T, IsbnError>;
 
