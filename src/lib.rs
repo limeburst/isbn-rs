@@ -278,7 +278,12 @@ impl fmt::Display for Isbn10 {
 impl FromStr for Isbn10 {
     type Err = IsbnError;
     fn from_str(s: &str) -> Result<Isbn10, IsbnError> {
-        Parser::new(s)?.read_isbn10()
+        let mut p = Parser::new(s)?;
+        if p.digits.len() != 10 {
+            Err(IsbnError::InvalidLength)
+        } else {
+            p.read_isbn10()
+        }
     }
 }
 
@@ -426,7 +431,12 @@ impl From<Isbn10> for Isbn13 {
 impl FromStr for Isbn13 {
     type Err = IsbnError;
     fn from_str(s: &str) -> Result<Isbn13, IsbnError> {
-        Parser::new(s)?.read_isbn13()
+        let mut p = Parser::new(s)?;
+        if p.digits.len() != 13 {
+            Err(IsbnError::InvalidLength)
+        } else {
+            p.read_isbn13()
+        }
     }
 }
 
@@ -531,7 +541,7 @@ impl Parser {
         let check_digit = Isbn10::calculate_check_digit(&self.digits);
         if check_digit == *self.digits.last().unwrap() {
             let mut a = [0; 10];
-            a.clone_from_slice(&self.digits[..10]);
+            a.clone_from_slice(&self.digits);
             Ok(Isbn10 { digits: a })
         } else {
             Err(IsbnError::InvalidDigit)
