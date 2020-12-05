@@ -420,15 +420,11 @@ impl fmt::Display for Isbn13 {
 
 impl From<Isbn10> for Isbn13 {
     fn from(isbn10: Isbn10) -> Isbn13 {
-        let mut v = ArrayVec::<[u8; 13]>::new();
-        v.extend([9, 7, 8].iter().cloned());
-        v.extend(isbn10.digits[..9].iter().cloned());
-        let c = Isbn13::calculate_check_digit(&v);
-        let d = isbn10.digits;
-        Isbn13::new(
-            9, 7, 8, d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], c,
-        )
-        .unwrap()
+        let mut a = [0; 13];
+        a[..3].clone_from_slice(&[9, 7, 8]);
+        a[3..12].clone_from_slice(&isbn10.digits[0..9]);
+        a[12] = Isbn13::calculate_check_digit(&a);
+        Isbn13 { digits: a }
     }
 }
 
