@@ -508,7 +508,7 @@ impl Parser {
         let check_digit = Isbn13::calculate_check_digit(&self.digits);
         if check_digit == *self.digits.last().unwrap() {
             let mut a = [0u8; 13];
-            a.clone_from_slice(&self.digits);
+            a.clone_from_slice(&self.digits[..13]);
             Ok(Isbn13 { digits: a })
         } else {
             Err(IsbnError::InvalidDigit)
@@ -519,7 +519,7 @@ impl Parser {
         let check_digit = Isbn10::calculate_check_digit(&self.digits);
         if check_digit == *self.digits.last().unwrap() {
             let mut a = [0; 10];
-            a.clone_from_slice(&self.digits[0..10]);
+            a.clone_from_slice(&self.digits[..10]);
             Ok(Isbn10 { digits: a })
         } else {
             Err(IsbnError::InvalidDigit)
