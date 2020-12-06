@@ -185,12 +185,13 @@ impl Isbn10 {
     /// assert_eq!(Isbn10::try_from(isbn_13), "1-4920-6766-0".parse());
     /// ```
     pub fn try_from(isbn13: Isbn13) -> IsbnResult<Self> {
-        let d = isbn13.digits;
-        if d[..3] != [9, 7, 8] {
+        if isbn13.digits[..3] != [9, 7, 8] {
             Err(IsbnError::InvalidConversion)
         } else {
-            let c = Isbn10::calculate_check_digit(&isbn13.digits[3..]);
-            Isbn10::new(d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], c)
+            let mut a = [0; 10];
+            a[..9].clone_from_slice(&isbn13.digits[3..12]);
+            a[9] = Isbn10::calculate_check_digit(&a);
+            Ok(Isbn10 { digits: a })
         }
     }
 
