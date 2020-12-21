@@ -121,9 +121,8 @@ fn codegen_find_group(name: &str, groups: Vec<Group>) -> Function {
 }
 
 fn main() {
-    eprintln!("{:?}", std::fs::read_dir("../").unwrap().collect::<Vec<_>>());
-    eprintln!("{:?}", std::fs::read_dir("./").unwrap().collect::<Vec<_>>());
-    let mut f = File::open("isbn-ranges/RangeMessage.xml").unwrap();
+    // eprintln!("{:?}", std::fs::read_dir("./").unwrap().collect::<Vec<_>>());
+    let mut f = File::open("./isbn-ranges/RangeMessage.xml").unwrap();
     let mut text = String::new();
     f.read_to_string(&mut text).unwrap();
 
