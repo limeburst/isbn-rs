@@ -48,7 +48,7 @@ fn parse_rules(group: Node) -> Vec<Rule> {
             Rule {
                 min: range[0],
                 max: range[1],
-                length: length,
+                length,
             }
         })
         .collect()
@@ -73,8 +73,8 @@ fn parse_group(group: Node) -> Group {
         .to_string();
 
     Group {
-        agency: agency,
-        prefix: prefix,
+        agency,
+        prefix,
         rules: parse_rules(group),
     }
 }
@@ -121,7 +121,6 @@ fn codegen_find_group(name: &str, groups: Vec<Group>) -> Function {
 }
 
 fn main() {
-    eprintln!("{:?}", std::fs::read_dir("./isbn-ranges/").unwrap().collect::<Vec<_>>());
     let mut f = File::open("./isbn-ranges/RangeMessage.xml").unwrap();
     let mut text = String::new();
     f.read_to_string(&mut text).unwrap();
@@ -130,12 +129,12 @@ fn main() {
     let ean_ucc_groups = range_message
         .descendants()
         .filter(|d| d.tag_name().name() == "EAN.UCC")
-        .map(|g| parse_group(g))
+        .map(parse_group)
         .collect();
     let registration_groups = range_message
         .descendants()
         .filter(|d| d.tag_name().name() == "Group")
-        .map(|g| parse_group(g))
+        .map(parse_group)
         .collect();
 
     let mut scope = Scope::new();
