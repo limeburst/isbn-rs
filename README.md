@@ -1,7 +1,7 @@
 isbn
 ====
 
-[![Build Status](https://github.com/philippeitis/isbn-rs/workflows/rust/badge.svg)](https://github.com/philippeitis/isbn-rs/)
+[![Build Status](https://github.com/philippeitis/isbn-rs/workflows/Rust/badge.svg)](https://github.com/philippeitis/isbn-rs/)
 
 A library for handling [International Standard Book Number], or ISBNs.
 
