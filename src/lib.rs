@@ -604,11 +604,11 @@ mod tests {
         assert!(Isbn::from_str("0-306-40615-2").is_ok());
 
         // Wikipedia ISBN-10 check digit calculation invalid example
-        // assert!(Isbn::from_str("99999-999-9-X").is_err());
+        assert!(Isbn::from_str("99999-999-9-X").is_err());
 
         // Wikipedia Registrant element examples
         assert!(Isbn::from_str("99921-58-10-7").is_ok());
-        assert!(Parser::new("9971-5-0210-0").is_ok());
+        assert!(Isbn::from_str("9971-5-0210-0").is_ok());
         assert!(Isbn::from_str("9971-5-0210-0").is_ok());
         assert!(Isbn::from_str("960-425-059-0").is_ok());
         assert!(Isbn::from_str("80-902734-1-6").is_ok());
