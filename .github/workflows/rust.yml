@@ -24,7 +24,9 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
         rust: [stable, nightly, beta, 1.39.0]
     steps:
-    - uses: textbook/git-checkout-submodule-action@2.1.1
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: ${{ matrix.rust }}
@@ -36,7 +38,9 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-    - uses: textbook/git-checkout-submodule-action@2.1.1
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
@@ -48,7 +52,9 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-    - uses: textbook/git-checkout-submodule-action@2.1.1
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
