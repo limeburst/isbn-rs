@@ -72,7 +72,7 @@ impl Isbn {
     /// assert_eq!(isbn_13.hyphenate().unwrap().as_str(), "978-1-4920-6766-5");
     /// ```
     pub fn hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
-        match *self {
+        match self {
             Isbn::_10(ref c) => c.hyphenate(),
             Isbn::_13(ref c) => c.hyphenate(),
         }
@@ -90,7 +90,7 @@ impl Isbn {
     /// assert_eq!(isbn_13.registration_group(), Ok("English language"));
     /// ```
     pub fn registration_group(&self) -> Result<&str, IsbnError> {
-        match *self {
+        match self {
             Isbn::_10(ref c) => c.registration_group(),
             Isbn::_13(ref c) => c.registration_group(),
         }
@@ -99,7 +99,7 @@ impl Isbn {
 
 impl fmt::Display for Isbn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
+        match self {
             Isbn::_10(ref c) => c.fmt(f),
             Isbn::_13(ref c) => c.fmt(f),
         }
@@ -156,7 +156,7 @@ impl Isbn10 {
     /// let isbn10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
     /// ```
     pub fn new(digits: [u8; 10]) -> IsbnResult<Isbn10> {
-        if digits[..9].iter().any(|d| *d > 9) || digits[9] > 10 {
+        if digits[..9].iter().any(|&digit| digit > 9) || digits[9] > 10 {
             Err(IsbnError::DigitTooLarge)
         } else if Isbn10::calculate_check_digit(&digits) == digits[9] {
             Ok(Isbn10 { digits })
@@ -326,7 +326,7 @@ impl Isbn13 {
     /// let isbn13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
     /// ```
     pub fn new(digits: [u8; 13]) -> IsbnResult<Isbn13> {
-        if digits.iter().any(|d| *d > 9) {
+        if digits.iter().any(|&digit| digit > 9) {
             Err(IsbnError::DigitTooLarge)
         } else if Isbn13::calculate_check_digit(&digits) == digits[12] {
             Ok(Isbn13 { digits })
