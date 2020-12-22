@@ -1,6 +1,6 @@
 [package]
 name = "isbn2"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Jihyeok Seo <limeburst@ridi.com>", "Philippe Solodov <solop1906@gmail.com>"]
 description = "A library for handling ISBNs."
 license = "MIT"
