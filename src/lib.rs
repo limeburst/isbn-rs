@@ -508,6 +508,8 @@ impl fmt::Display for IsbnError {
     }
 }
 
+impl std::error::Error for IsbnError {}
+
 impl From<ParseIntError> for IsbnError {
     fn from(_: ParseIntError) -> Self {
         IsbnError::InvalidDigit
