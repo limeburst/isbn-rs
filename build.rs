@@ -45,6 +45,7 @@ fn parse_rules(group: Node) -> Vec<Rule> {
                 .unwrap()
                 .parse()
                 .unwrap();
+            assert!(length < 8, "Segment length can be at most 7.");
 
             Rule {
                 min: range[0],
@@ -98,9 +99,9 @@ fn codegen_find_group(name: &str, groups: Vec<Group>) -> Function {
     fn_get_group.arg("segment", "u32");
     fn_get_group.ret("Result<Group<'static>, IsbnError>");
 
-    let mut match_prefix = Block::new("match prefix");
+    let mut match_prefix = Block::new("match *prefix");
     for group in groups {
-        match_prefix.line(format!("&{:?} =>", group.prefix));
+        match_prefix.line(format!("{:?} =>", group.prefix));
 
         let mut let_length_eq_match_segment = Block::new("let length = match segment");
         for rule in &group.rules {
@@ -139,10 +140,10 @@ fn codegen_find_registration_group(name: &str, groups: Vec<Group>) -> Function {
     fn_get_group.arg("segment", "u32");
     fn_get_group.ret("Result<Group<'static>, IsbnError>");
 
-    let mut match_prefix = Block::new("match (prefix, registration_group_element)");
+    let mut match_prefix = Block::new("match (*prefix, registration_group_element)");
     for group in groups {
         match_prefix.line(format!(
-            "(&{:?}, \"{}\") =>",
+            "({:?}, \"{}\") =>",
             group.prefix, group.registration_group_element
         ));
 

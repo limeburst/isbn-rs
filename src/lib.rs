@@ -125,13 +125,13 @@ impl FromStr for Isbn {
     }
 }
 
-/// Used to convert ISBN13 digits into chars.
-fn convert13(d: u8) -> char {
+/// Used to convert ISBN digits into chars, excluding the last digit of ISBN10.
+fn convert_isbn_body(d: u8) -> char {
     char::from_digit(d.into(), 10).unwrap()
 }
 
-/// Used to convert ISBN10 digits into chars.
-fn convert10(d: u8) -> char {
+/// Used to convert ISBN digits into chars, including the last digit of ISBN10.
+fn convert_isbn10_check(d: u8) -> char {
     if d < 11 {
         ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'X'][d as usize]
     } else {
@@ -146,7 +146,8 @@ pub struct Isbn10 {
 }
 
 impl Isbn10 {
-    /// Creates a new ISBN10 code from 10 digits.
+    /// Creates a new ISBN10 code from 10 digits. Verifies that the checksum is correct,
+    /// and that no digits are out of bounds.
     ///
     /// # Examples
     ///
@@ -228,16 +229,16 @@ impl Isbn10 {
             registration_group_segment_length + registrant_segment_length,
         ];
 
-        let mut hyphenated = ArrayString::<[u8; 17]>::new();
+        let mut hyphenated = ArrayString::new();
         for (i, &digit) in self.digits[0..9].iter().enumerate() {
             if hyphen_at.contains(&i) {
                 hyphenated.push('-')
             }
-            hyphenated.push(convert13(digit));
+            hyphenated.push(convert_isbn_body(digit));
         }
 
         hyphenated.push('-');
-        hyphenated.push(convert10(self.digits[9]));
+        hyphenated.push(convert_isbn10_check(self.digits[9]));
 
         Ok(hyphenated)
     }
@@ -266,21 +267,15 @@ impl Isbn10 {
     }
 
     fn segment(&self, base: usize) -> u32 {
-        if base > 9 {
-            return 0;
-        }
-
-        let mut s = 0u32;
-        for (i, &digit) in self.digits[base..].iter().take(7).enumerate() {
-            s += (digit as u32) * 10_u32.pow(6 - i as u32);
-        }
-        s
+        (0..7).fold(0, |s, i| {
+            s + u32::from(*self.digits.get(base + i).unwrap_or(&0)) * 10_u32.pow(6 - i as u32)
+        })
     }
 
     fn group_prefix(&self, length: usize) -> ArrayString<[u8; 10]> {
         let mut hyphenated = ArrayString::new();
         for &digit in &self.digits[..length] {
-            hyphenated.push(convert10(digit));
+            hyphenated.push(convert_isbn_body(digit));
         }
         hyphenated
     }
@@ -291,8 +286,8 @@ impl fmt::Display for Isbn10 {
         let mut s = ArrayString::<[u8; 10]>::new();
         self.digits[0..9]
             .iter()
-            .for_each(|&digit| s.push(convert13(digit)));
-        s.push(convert10(self.digits[9]));
+            .for_each(|&digit| s.push(convert_isbn_body(digit)));
+        s.push(convert_isbn10_check(self.digits[9]));
         write!(f, "{}", s)
     }
 }
@@ -316,7 +311,8 @@ pub struct Isbn13 {
 }
 
 impl Isbn13 {
-    /// Creates a new ISBN13 code from 13 digits.
+    /// Creates a new ISBN13 code from 13 digits. Verifies that the checksum is correct,
+    /// and that no digits are out of bounds.
     ///
     /// # Examples
     ///
@@ -378,10 +374,11 @@ impl Isbn13 {
             registration_group_segment_length,
             registration_group_segment_length + registrant_segment_length,
         ];
-        let mut hyphenated = ArrayString::<[u8; 17]>::new();
+
+        let mut hyphenated = ArrayString::new();
 
         for &digit in &self.digits[0..3] {
-            hyphenated.push(convert13(digit))
+            hyphenated.push(convert_isbn_body(digit))
         }
         hyphenated.push('-');
 
@@ -389,11 +386,11 @@ impl Isbn13 {
             if hyphen_at.contains(&i) {
                 hyphenated.push('-')
             }
-            hyphenated.push(convert13(digit));
+            hyphenated.push(convert_isbn_body(digit));
         }
 
         hyphenated.push('-');
-        hyphenated.push(convert13(self.digits[12]));
+        hyphenated.push(convert_isbn_body(self.digits[12]));
 
         Ok(hyphenated)
     }
@@ -424,21 +421,15 @@ impl Isbn13 {
     }
 
     fn segment(&self, base: usize) -> u32 {
-        if base + 3 > 12 {
-            return 0;
-        }
-
-        let mut s = 0u32;
-        for (i, &digit) in self.digits[3 + base..].iter().take(6).enumerate() {
-            s += (digit as u32) * 10_u32.pow(6 - i as u32);
-        }
-        s
+        (3..9).fold(0, |s, i| {
+            s + u32::from(*self.digits.get(base + i).unwrap_or(&0)) * 10_u32.pow(9 - i as u32)
+        })
     }
 
     fn group_prefix(&self, length: usize) -> ArrayString<[u8; 10]> {
         let mut hyphenated = ArrayString::new();
         for &digit in &self.digits[3..length + 3] {
-            hyphenated.push(convert13(digit));
+            hyphenated.push(convert_isbn_body(digit));
         }
         hyphenated
     }
@@ -449,18 +440,18 @@ impl fmt::Display for Isbn13 {
         let mut s = ArrayString::<[u8; 13]>::new();
         self.digits
             .iter()
-            .for_each(|&digit| s.push(convert13(digit)));
+            .for_each(|&digit| s.push(convert_isbn_body(digit)));
         write!(f, "{}", s)
     }
 }
 
 impl From<Isbn10> for Isbn13 {
     fn from(isbn10: Isbn10) -> Isbn13 {
-        let mut a = [0; 13];
-        a[..3].clone_from_slice(&[9, 7, 8]);
-        a[3..12].clone_from_slice(&isbn10.digits[0..9]);
-        a[12] = Isbn13::calculate_check_digit(&a);
-        Isbn13 { digits: a }
+        let mut digits = [0; 13];
+        digits[..3].clone_from_slice(&[9, 7, 8]);
+        digits[3..12].clone_from_slice(&isbn10.digits[0..9]);
+        digits[12] = Isbn13::calculate_check_digit(&digits);
+        Isbn13 { digits }
     }
 }
 
@@ -571,23 +562,25 @@ impl Parser {
         }
     }
 
+    /// Reads an ISBN13 from self. Requires that length is checked beforehand.
     fn read_isbn13(&mut self) -> Result<Isbn13, IsbnError> {
-        let mut a = [0u8; 13];
-        a.clone_from_slice(&self.digits);
-        let check_digit = Isbn13::calculate_check_digit(&a);
-        if check_digit == a[12] {
-            Ok(Isbn13 { digits: a })
+        let mut digits = [0u8; 13];
+        digits.clone_from_slice(&self.digits);
+        let check_digit = Isbn13::calculate_check_digit(&digits);
+        if check_digit == digits[12] {
+            Ok(Isbn13 { digits })
         } else {
             Err(IsbnError::InvalidDigit)
         }
     }
 
+    /// Reads an ISBN10 from self. Requires that length is checked beforehand.
     fn read_isbn10(&mut self) -> Result<Isbn10, IsbnError> {
-        let mut a = [0; 10];
-        a.clone_from_slice(&self.digits);
-        let check_digit = Isbn10::calculate_check_digit(&a);
-        if check_digit == a[9] {
-            Ok(Isbn10 { digits: a })
+        let mut digits = [0; 10];
+        digits.clone_from_slice(&self.digits);
+        let check_digit = Isbn10::calculate_check_digit(&digits);
+        if check_digit == digits[9] {
+            Ok(Isbn10 { digits })
         } else {
             Err(IsbnError::InvalidDigit)
         }
