@@ -9,7 +9,8 @@ use roxmltree::{Document, Node};
 /// EAN.UCC prefix or registration group.
 struct Group {
     agency: String,
-    prefix: String,
+    prefix: [u8; 3],
+    registration_group_element: String,
     rules: Vec<Rule>,
 }
 
@@ -56,13 +57,23 @@ fn parse_rules(group: Node) -> Vec<Rule> {
 
 /// Parse EAN.UCC prefix and registration group element.
 fn parse_group(group: Node) -> Group {
-    let prefix = group
+    let prefix_str = group
         .descendants()
         .find(|n| n.has_tag_name("Prefix"))
         .unwrap()
         .text()
-        .unwrap()
-        .to_string();
+        .unwrap();
+
+    let mut prefix = [0; 3];
+    let mut registration_group_element = String::new();
+    for (i, c) in prefix_str.chars().enumerate() {
+        if i < 3 {
+            prefix[i] = c.to_digit(10).unwrap() as u8;
+        }
+        if i >= 4 {
+            registration_group_element.push(c);
+        }
+    }
 
     let agency = group
         .descendants()
@@ -75,6 +86,7 @@ fn parse_group(group: Node) -> Group {
     Group {
         agency,
         prefix,
+        registration_group_element,
         rules: parse_rules(group),
     }
 }
@@ -82,13 +94,57 @@ fn parse_group(group: Node) -> Group {
 /// Generate code for EAN.UCC or registration group lookup.
 fn codegen_find_group(name: &str, groups: Vec<Group>) -> Function {
     let mut fn_get_group = Function::new(name);
-    fn_get_group.arg("prefix", "&str");
+    fn_get_group.arg("prefix", "&[u8; 3]");
     fn_get_group.arg("segment", "u32");
     fn_get_group.ret("Result<Group<'static>, IsbnError>");
 
     let mut match_prefix = Block::new("match prefix");
     for group in groups {
-        match_prefix.line(format!("\"{}\" =>", group.prefix));
+        match_prefix.line(format!("&{:?} =>", group.prefix));
+
+        let mut let_length_eq_match_segment = Block::new("let length = match segment");
+        for rule in &group.rules {
+            let_length_eq_match_segment.line(match rule.length {
+                0 => format!(
+                    "{} ..= {} => Err(IsbnError::UndefinedRange),",
+                    rule.min, rule.max
+                ),
+                _ => format!("{} ..= {} => Ok({}),", rule.min, rule.max, rule.length),
+            });
+        }
+        let_length_eq_match_segment.line("_ => Err(IsbnError::InvalidGroup)");
+        let_length_eq_match_segment.after(";");
+
+        let mut ok_group = Block::new("Ok(Group");
+        ok_group.line(format!("name: \"{}\",", group.agency));
+        ok_group.line("segment_length: length?");
+        ok_group.after(")");
+
+        let mut segment_match_block = Block::new("");
+        segment_match_block.push_block(let_length_eq_match_segment);
+        segment_match_block.push_block(ok_group);
+
+        match_prefix.push_block(segment_match_block);
+    }
+    match_prefix.line("_ => Err(IsbnError::InvalidGroup)");
+
+    fn_get_group.push_block(match_prefix);
+    fn_get_group
+}
+
+fn codegen_find_registration_group(name: &str, groups: Vec<Group>) -> Function {
+    let mut fn_get_group = Function::new(name);
+    fn_get_group.arg("prefix", "&[u8; 3]");
+    fn_get_group.arg("registration_group_element", "&str");
+    fn_get_group.arg("segment", "u32");
+    fn_get_group.ret("Result<Group<'static>, IsbnError>");
+
+    let mut match_prefix = Block::new("match (prefix, registration_group_element)");
+    for group in groups {
+        match_prefix.line(format!(
+            "(&{:?}, \"{}\") =>",
+            group.prefix, group.registration_group_element
+        ));
 
         let mut let_length_eq_match_segment = Block::new("let length = match segment");
         for rule in &group.rules {
@@ -140,7 +196,7 @@ fn main() {
     let mut scope = Scope::new();
     let impl_isbn = scope.new_impl("Isbn");
     impl_isbn.push_fn(codegen_find_group("get_ean_ucc_group", ean_ucc_groups));
-    impl_isbn.push_fn(codegen_find_group(
+    impl_isbn.push_fn(codegen_find_registration_group(
         "get_registration_group",
         registration_groups,
     ));
