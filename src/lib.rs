@@ -18,6 +18,9 @@
 //!
 //! [International Standard Book Number]: https://www.isbn-international.org/
 
+#![deny(clippy::missing_errors_doc)]
+#![deny(clippy::if_not_else)]
+
 use core::char;
 use core::fmt;
 use core::num::ParseIntError;
@@ -71,6 +74,9 @@ impl Isbn {
     /// assert_eq!(isbn_10.hyphenate().unwrap().as_str(), "89-6626-126-4");
     /// assert_eq!(isbn_13.hyphenate().unwrap().as_str(), "978-1-4920-6766-5");
     /// ```
+    /// # Errors
+    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
+    /// returned.
     pub fn hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
         match self {
             Isbn::_10(ref c) => c.hyphenate(),
@@ -89,6 +95,10 @@ impl Isbn {
     /// assert_eq!(isbn_10.registration_group(), Ok("Korea, Republic"));
     /// assert_eq!(isbn_13.registration_group(), Ok("English language"));
     /// ```
+    ///
+    /// # Errors
+    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
+    /// returned.
     pub fn registration_group(&self) -> Result<&str, IsbnError> {
         match self {
             Isbn::_10(ref c) => c.registration_group(),
@@ -156,6 +166,10 @@ impl Isbn10 {
     ///
     /// let isbn10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
     /// ```
+    /// # Errors
+    /// If any of the first nine digits exceed nine, or the tenth digit exceeds 10, an error
+    /// will be returned. If the check digit is not correct for the ISBN, an error will also
+    /// be returned.
     pub fn new(digits: [u8; 10]) -> IsbnResult<Isbn10> {
         if digits[..9].iter().any(|&digit| digit > 9) || digits[9] > 10 {
             Err(IsbnError::DigitTooLarge)
@@ -174,14 +188,17 @@ impl Isbn10 {
     /// let isbn_13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
     /// assert_eq!(Isbn10::try_from(isbn_13), "1-4920-6766-0".parse());
     /// ```
+    /// # Errors
+    /// If the ISBN13 does not have a 978 prefix, it can not be downcast to an ISBN10, and an
+    /// error will be returned.
     pub fn try_from(isbn13: Isbn13) -> IsbnResult<Self> {
-        if isbn13.digits[..3] != [9, 7, 8] {
-            Err(IsbnError::InvalidConversion)
-        } else {
+        if isbn13.digits[..3] == [9, 7, 8] {
             let mut a = [0; 10];
             a[..9].clone_from_slice(&isbn13.digits[3..12]);
             a[9] = Isbn10::calculate_check_digit(&a);
             Ok(Isbn10 { digits: a })
+        } else {
+            Err(IsbnError::InvalidConversion)
         }
     }
 
@@ -200,7 +217,7 @@ impl Isbn10 {
     }
 
     fn ean_ucc_group(&self) -> Result<Group, IsbnError> {
-        Isbn::get_ean_ucc_group(&self.prefix_element(), self.segment(0))
+        Isbn::get_ean_ucc_group(self.prefix_element(), self.segment(0))
     }
 
     /// Hyphenate an ISBN-10 into its parts:
@@ -216,10 +233,13 @@ impl Isbn10 {
     /// let isbn_10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
     /// assert_eq!(isbn_10.hyphenate().unwrap().as_str(), "89-6626-126-4");
     /// ```
+    /// # Errors
+    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
+    /// returned.
     pub fn hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
         let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
         let registrant_segment_length = Isbn::get_registration_group(
-            &self.prefix_element(),
+            self.prefix_element(),
             &self.group_prefix(registration_group_segment_length),
             self.segment(registration_group_segment_length),
         )?
@@ -251,11 +271,14 @@ impl Isbn10 {
     /// let isbn_10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
     /// assert_eq!(isbn_10.registration_group(), Ok("Korea, Republic"));
     /// ```
+    /// # Errors
+    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
+    /// returned.
     pub fn registration_group(&self) -> Result<&str, IsbnError> {
         let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
 
         Ok(Isbn::get_registration_group(
-            &self.prefix_element(),
+            self.prefix_element(),
             &self.group_prefix(registration_group_segment_length),
             self.segment(registration_group_segment_length),
         )?
@@ -296,10 +319,10 @@ impl FromStr for Isbn10 {
     type Err = IsbnError;
     fn from_str(s: &str) -> Result<Isbn10, IsbnError> {
         let mut p = Parser::new(s)?;
-        if p.digits.len() != 10 {
-            Err(IsbnError::InvalidLength)
-        } else {
+        if p.digits.len() == 10 {
             p.read_isbn10()
+        } else {
+            Err(IsbnError::InvalidLength)
         }
     }
 }
@@ -321,6 +344,9 @@ impl Isbn13 {
     ///
     /// let isbn13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
     /// ```
+    /// # Errors
+    /// If any of the digits exceed nine, an error will be returned. If the check digit is not
+    /// correct for the ISBN, an error will also be returned.
     pub fn new(digits: [u8; 13]) -> IsbnResult<Isbn13> {
         if digits.iter().any(|&digit| digit > 9) {
             Err(IsbnError::DigitTooLarge)
@@ -345,7 +371,7 @@ impl Isbn13 {
     }
 
     fn ean_ucc_group(&self) -> Result<Group, IsbnError> {
-        Isbn::get_ean_ucc_group(&self.prefix_element(), self.segment(0))
+        Isbn::get_ean_ucc_group(self.prefix_element(), self.segment(0))
     }
 
     /// Hyphenate an ISBN-13 into its parts:
@@ -362,10 +388,13 @@ impl Isbn13 {
     /// let isbn_13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
     /// assert_eq!(isbn_13.hyphenate().unwrap().as_str(), "978-1-4920-6766-5");
     /// ```
+    /// # Errors
+    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
+    /// returned.
     pub fn hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
         let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
         let registrant_segment_length = Isbn::get_registration_group(
-            &self.prefix_element(),
+            self.prefix_element(),
             &self.group_prefix(registration_group_segment_length),
             self.segment(registration_group_segment_length),
         )?
@@ -403,11 +432,14 @@ impl Isbn13 {
     /// let isbn_13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
     /// assert_eq!(isbn_13.registration_group(), Ok("English language"));
     /// ```
+    /// # Errors
+    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
+    /// returned.
     pub fn registration_group(&self) -> Result<&str, IsbnError> {
         let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
 
         Ok(Isbn::get_registration_group(
-            &self.prefix_element(),
+            self.prefix_element(),
             &self.group_prefix(registration_group_segment_length),
             self.segment(registration_group_segment_length),
         )?
@@ -459,10 +491,10 @@ impl FromStr for Isbn13 {
     type Err = IsbnError;
     fn from_str(s: &str) -> Result<Isbn13, IsbnError> {
         let mut p = Parser::new(s)?;
-        if p.digits.len() != 13 {
-            Err(IsbnError::InvalidLength)
-        } else {
+        if p.digits.len() == 13 {
             p.read_isbn13()
+        } else {
+            Err(IsbnError::InvalidLength)
         }
     }
 }
@@ -566,7 +598,7 @@ impl Parser {
 
     /// Reads an ISBN13 from self. Requires that length is checked beforehand.
     fn read_isbn13(&mut self) -> Result<Isbn13, IsbnError> {
-        let mut digits = [0u8; 13];
+        let mut digits = [0; 13];
         digits.clone_from_slice(&self.digits);
         let check_digit = Isbn13::calculate_check_digit(&digits);
         if check_digit == digits[12] {
@@ -619,6 +651,10 @@ mod tests {
     #[test]
     fn test_hyphens_no_panic() {
         assert!(Isbn::from_str("0-9752298-0-X").unwrap().hyphenate().is_ok());
+        assert!(Isbn::from_str("978-3-16-148410-0")
+            .unwrap()
+            .hyphenate()
+            .is_ok());
     }
 
     #[test]
