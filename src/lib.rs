@@ -382,7 +382,7 @@ impl Isbn13 {
 
         for &digit in &self.digits[0..3] {
             hyphenated.push(convert13(digit))
-        };
+        }
         hyphenated.push('-');
 
         for (i, &digit) in self.digits[3..12].iter().enumerate() {
@@ -429,7 +429,7 @@ impl Isbn13 {
         }
 
         let mut s = 0u32;
-        for (i, &digit) in self.digits[3+base..].iter().take(6).enumerate() {
+        for (i, &digit) in self.digits[3 + base..].iter().take(6).enumerate() {
             s += (digit as u32) * 10_u32.pow(6 - i as u32);
         }
         s
