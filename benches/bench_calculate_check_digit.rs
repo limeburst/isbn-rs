@@ -3,8 +3,7 @@ extern crate test;
 use test::Bencher;
 
 use core::hint::black_box;
-use core::str::FromStr;
-use isbn::*;
+use isbn2::*;
 
 #[bench]
 fn bench_calculate_check_digit_10(b: &mut Bencher) {
