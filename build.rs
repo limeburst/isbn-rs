@@ -16,7 +16,7 @@ const ALLOW_LINTS: &str = r###"
 struct Group {
     agency: String,
     prefix: [u8; 3],
-    registration_group_element: String,
+    registration_group_element: Vec<u8>,
     rules: Vec<Rule>,
 }
 
@@ -72,13 +72,13 @@ fn parse_group(group: Node) -> Group {
         .unwrap();
 
     let mut prefix = [0; 3];
-    let mut registration_group_element = String::new();
+    let mut registration_group_element = Vec::new();
     for (i, c) in prefix_str.chars().enumerate() {
         if i < 3 {
             prefix[i] = c.to_digit(10).unwrap() as u8;
         }
         if i >= 4 {
-            registration_group_element.push(c);
+            registration_group_element.push(c.to_digit(10).unwrap() as u8)
         }
     }
 
@@ -101,10 +101,10 @@ fn parse_group(group: Node) -> Group {
 /// Generate code for EAN.UCC or registration group lookup.
 fn codegen_find_group(name: &str, groups: Vec<Group>, check_registration_group: bool) -> Function {
     let mut fn_get_group = Function::new(name);
-    fn_get_group.arg("prefix", "[u8; 3]");
+    fn_get_group.arg("prefix", "u16");
 
     if check_registration_group {
-        fn_get_group.arg("registration_group_element", "&str");
+        fn_get_group.arg("registration_group_element", "u32");
     }
 
     fn_get_group.arg("segment", "u32");
@@ -119,11 +119,25 @@ fn codegen_find_group(name: &str, groups: Vec<Group>, check_registration_group: 
     for group in groups {
         match_prefix.line(if check_registration_group {
             format!(
-                "({:?}, \"{}\") =>",
-                group.prefix, group.registration_group_element
+                "({:#X}, {:#X}) =>",
+                ((group.prefix[0] as u16) << 8)
+                    | ((group.prefix[1] as u16) << 4)
+                    | (group.prefix[2] as u16),
+                {
+                    let mut digits = 0u32;
+                    for &digit in &group.registration_group_element {
+                        digits = (digits << 4) | digit as u32;
+                    }
+                    digits
+                }
             )
         } else {
-            format!("{:?} =>", group.prefix)
+            format!(
+                "{:#X} =>",
+                ((group.prefix[0] as u16) << 8)
+                    | ((group.prefix[1] as u16) << 4)
+                    | (group.prefix[2] as u16)
+            )
         });
 
         let mut let_length_eq_match_segment = Block::new("let length = match segment");
@@ -190,6 +204,6 @@ fn main() {
 
     let mut f = File::create(&dest_path).unwrap();
     f.write_all(ALLOW_LINTS.trim_start().as_bytes()).unwrap();
-    writeln!(f, "").unwrap();
+    writeln!(f).unwrap();
     f.write_all(scope.to_string().as_bytes()).unwrap();
 }

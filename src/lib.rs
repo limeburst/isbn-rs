@@ -241,7 +241,7 @@ impl Isbn10 {
         let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
         let registrant_segment_length = Isbn::get_registration_group(
             self.prefix_element(),
-            &self.group_prefix(registration_group_segment_length),
+            self.group_prefix(registration_group_segment_length),
             self.segment(registration_group_segment_length),
         )?
         .segment_length;
@@ -280,14 +280,14 @@ impl Isbn10 {
 
         Ok(Isbn::get_registration_group(
             self.prefix_element(),
-            &self.group_prefix(registration_group_segment_length),
+            self.group_prefix(registration_group_segment_length),
             self.segment(registration_group_segment_length),
         )?
         .name)
     }
 
-    fn prefix_element(&self) -> [u8; 3] {
-        [9, 7, 8]
+    fn prefix_element(&self) -> u16 {
+        0x978
     }
 
     fn segment(&self, base: usize) -> u32 {
@@ -296,12 +296,12 @@ impl Isbn10 {
         })
     }
 
-    fn group_prefix(&self, length: usize) -> ArrayString<[u8; 10]> {
-        let mut hyphenated = ArrayString::new();
+    fn group_prefix(&self, length: usize) -> u32 {
+        let mut digits = 0;
         for &digit in &self.digits[..length] {
-            hyphenated.push(convert_isbn_body(digit));
+            digits = (digits << 4) | digit as u32;
         }
-        hyphenated
+        digits
     }
 }
 
@@ -396,7 +396,7 @@ impl Isbn13 {
         let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
         let registrant_segment_length = Isbn::get_registration_group(
             self.prefix_element(),
-            &self.group_prefix(registration_group_segment_length),
+            self.group_prefix(registration_group_segment_length),
             self.segment(registration_group_segment_length),
         )?
         .segment_length;
@@ -441,16 +441,14 @@ impl Isbn13 {
 
         Ok(Isbn::get_registration_group(
             self.prefix_element(),
-            &self.group_prefix(registration_group_segment_length),
+            self.group_prefix(registration_group_segment_length),
             self.segment(registration_group_segment_length),
         )?
         .name)
     }
 
-    fn prefix_element(&self) -> [u8; 3] {
-        let mut s = [0; 3];
-        s.clone_from_slice(&self.digits[0..3]);
-        s
+    fn prefix_element(&self) -> u16 {
+        ((self.digits[0] as u16) << 8) | ((self.digits[1] as u16) << 4) | (self.digits[2] as u16)
     }
 
     fn segment(&self, base: usize) -> u32 {
@@ -459,12 +457,12 @@ impl Isbn13 {
         })
     }
 
-    fn group_prefix(&self, length: usize) -> ArrayString<[u8; 10]> {
-        let mut hyphenated = ArrayString::new();
+    fn group_prefix(&self, length: usize) -> u32 {
+        let mut digits = 0;
         for &digit in &self.digits[3..length + 3] {
-            hyphenated.push(convert_isbn_body(digit));
+            digits = (digits << 4) | digit as u32;
         }
-        hyphenated
+        digits
     }
 }
 
