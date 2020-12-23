@@ -32,7 +32,7 @@ jobs:
         toolchain: ${{ matrix.rust }}
         override: true
     - name: Build
-      run: cargo test --verbose
+      run: cargo test --verbose --features std
   fmt:
     runs-on: ubuntu-latest
     strategy:
@@ -60,4 +60,4 @@ jobs:
         toolchain: stable
         override: true
     - name: Run clippy
-      run: rustup component add clippy && cargo clippy
+      run: rustup component add clippy && cargo clippy --features std
