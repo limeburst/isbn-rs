@@ -684,4 +684,19 @@ mod tests {
         assert!(Isbn13::from_str("012345678").is_err());
         assert!(Isbn13::from_str("0123456789012345").is_err());
     }
+
+    #[test]
+    fn test_isbns_do_not_accept_larger_digits() {
+        let mut a = [10; 10];
+        // Everything except check digit must be <= 9.
+        a[9] = Isbn10::calculate_check_digit(&a);
+        assert!(Isbn10::new(a).is_err());
+        // Check digit can be 10.
+        assert!(Isbn10::new([0, 9, 7, 5, 2, 2, 9, 8, 0, 10]).is_ok());
+        // Check digits which are larger than 10 are implicitly handled by
+        // the fact that calculate_check_digit returns a number from 0 to 10.
+        let mut a = [10; 13];
+        a[12] = Isbn13::calculate_check_digit(&a);
+        assert!(Isbn13::new(a).is_err());
+    }
 }
