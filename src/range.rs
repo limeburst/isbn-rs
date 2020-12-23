@@ -266,7 +266,11 @@ impl IsbnRange {
         }
     }
 
-    /// Opens the RangeMessage.xml file and loads the ranges into memory.
+    /// Opens the RangeMessage.xml file and loads the ranges into memory. Should be used if the
+    /// ISBN ranges need to be current. Up-to-date ISBN ranges can be downloaded from the following
+    /// sources:
+    /// * https://www.isbn-international.org/export_rangemessage.xml
+    /// * https://github.com/philippeitis/isbn-ranges/blob/master/RangeMessage.xml
     ///
     /// ```
     /// use isbn2::{Isbn, Isbn10, Isbn13, IsbnRange};
