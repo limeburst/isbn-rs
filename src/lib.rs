@@ -33,6 +33,52 @@ pub type IsbnResult<T> = Result<T, IsbnError>;
 
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
+struct Group<'a> {
+    name: &'a str,
+    segment_length: usize,
+}
+
+trait IsbnObject {
+    fn ean_ucc_group(&self) -> Result<Group, IsbnError> {
+        Isbn::get_ean_ucc_group(self.prefix_element(), self.segment(0))
+    }
+
+    fn hyphenate_with(&self, hyphen_at: [usize; 2]) -> ArrayString<[u8; 17]>;
+
+    fn trait_hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
+        let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
+        let registrant_segment_length = Isbn::get_registration_group(
+            self.prefix_element(),
+            self.group_prefix(registration_group_segment_length),
+            self.segment(registration_group_segment_length),
+        )?
+        .segment_length;
+
+        let hyphen_at = [
+            registration_group_segment_length,
+            registration_group_segment_length + registrant_segment_length,
+        ];
+        Ok(self.hyphenate_with(hyphen_at))
+    }
+
+    fn trait_registration_group(&self) -> Result<&str, IsbnError> {
+        let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
+
+        Ok(Isbn::get_registration_group(
+            self.prefix_element(),
+            self.group_prefix(registration_group_segment_length),
+            self.segment(registration_group_segment_length),
+        )?
+        .name)
+    }
+
+    fn prefix_element(&self) -> u16;
+
+    fn segment(&self, base: usize) -> u32;
+
+    fn group_prefix(&self, length: usize) -> u32;
+}
+
 /// An International Standard Book Number, either ISBN10 or ISBN13.
 ///
 /// # Examples
@@ -50,11 +96,6 @@ include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 pub enum Isbn {
     _10(Isbn10),
     _13(Isbn13),
-}
-
-struct Group<'a> {
-    name: &'a str,
-    segment_length: usize,
 }
 
 impl Isbn {
@@ -156,6 +197,43 @@ pub struct Isbn10 {
     digits: [u8; 10],
 }
 
+impl IsbnObject for Isbn10 {
+    /// Applies two hyphens in the middle.
+    fn hyphenate_with(&self, hyphen_at: [usize; 2]) -> ArrayString<[u8; 17]> {
+        let mut hyphenated = ArrayString::new();
+
+        for (i, &digit) in self.digits[0..9].iter().enumerate() {
+            if hyphen_at.contains(&i) {
+                hyphenated.push('-')
+            }
+            hyphenated.push(convert_isbn_body(digit));
+        }
+
+        hyphenated.push('-');
+        hyphenated.push(convert_isbn10_check(self.digits[9]));
+
+        hyphenated
+    }
+
+    fn prefix_element(&self) -> u16 {
+        0x978
+    }
+
+    fn segment(&self, base: usize) -> u32 {
+        (0..7).fold(0, |s, i| {
+            s + u32::from(*self.digits.get(base + i).unwrap_or(&0)) * 10_u32.pow(6 - i as u32)
+        })
+    }
+
+    fn group_prefix(&self, length: usize) -> u32 {
+        let mut digits = 0;
+        for &digit in &self.digits[..length] {
+            digits = (digits << 4) | digit as u32;
+        }
+        digits
+    }
+}
+
 impl Isbn10 {
     /// Creates a new ISBN10 code from 10 digits. Verifies that the checksum is correct,
     /// and that no digits are out of bounds.
@@ -217,10 +295,6 @@ impl Isbn10 {
         }
     }
 
-    fn ean_ucc_group(&self) -> Result<Group, IsbnError> {
-        Isbn::get_ean_ucc_group(self.prefix_element(), self.segment(0))
-    }
-
     /// Hyphenate an ISBN-10 into its parts:
     ///
     /// * Registration group
@@ -238,30 +312,7 @@ impl Isbn10 {
     /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
     /// returned.
     pub fn hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
-        let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
-        let registrant_segment_length = Isbn::get_registration_group(
-            self.prefix_element(),
-            self.group_prefix(registration_group_segment_length),
-            self.segment(registration_group_segment_length),
-        )?
-        .segment_length;
-        let hyphen_at = [
-            registration_group_segment_length,
-            registration_group_segment_length + registrant_segment_length,
-        ];
-
-        let mut hyphenated = ArrayString::new();
-        for (i, &digit) in self.digits[0..9].iter().enumerate() {
-            if hyphen_at.contains(&i) {
-                hyphenated.push('-')
-            }
-            hyphenated.push(convert_isbn_body(digit));
-        }
-
-        hyphenated.push('-');
-        hyphenated.push(convert_isbn10_check(self.digits[9]));
-
-        Ok(hyphenated)
+        self.trait_hyphenate()
     }
 
     /// Retrieve the name of the registration group.
@@ -276,32 +327,7 @@ impl Isbn10 {
     /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
     /// returned.
     pub fn registration_group(&self) -> Result<&str, IsbnError> {
-        let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
-
-        Ok(Isbn::get_registration_group(
-            self.prefix_element(),
-            self.group_prefix(registration_group_segment_length),
-            self.segment(registration_group_segment_length),
-        )?
-        .name)
-    }
-
-    fn prefix_element(&self) -> u16 {
-        0x978
-    }
-
-    fn segment(&self, base: usize) -> u32 {
-        (0..7).fold(0, |s, i| {
-            s + u32::from(*self.digits.get(base + i).unwrap_or(&0)) * 10_u32.pow(6 - i as u32)
-        })
-    }
-
-    fn group_prefix(&self, length: usize) -> u32 {
-        let mut digits = 0;
-        for &digit in &self.digits[..length] {
-            digits = (digits << 4) | digit as u32;
-        }
-        digits
+        self.trait_registration_group()
     }
 }
 
@@ -332,6 +358,47 @@ impl FromStr for Isbn10 {
 #[derive(Debug, PartialEq, Copy, Clone, Hash)]
 pub struct Isbn13 {
     digits: [u8; 13],
+}
+
+impl IsbnObject for Isbn13 {
+    fn hyphenate_with(&self, hyphen_at: [usize; 2]) -> ArrayString<[u8; 17]> {
+        let mut hyphenated = ArrayString::new();
+
+        for &digit in &self.digits[0..3] {
+            hyphenated.push(convert_isbn_body(digit))
+        }
+        hyphenated.push('-');
+
+        for (i, &digit) in self.digits[3..12].iter().enumerate() {
+            if hyphen_at.contains(&i) {
+                hyphenated.push('-')
+            }
+            hyphenated.push(convert_isbn_body(digit));
+        }
+
+        hyphenated.push('-');
+        hyphenated.push(convert_isbn_body(self.digits[12]));
+
+        hyphenated
+    }
+
+    fn prefix_element(&self) -> u16 {
+        ((self.digits[0] as u16) << 8) | ((self.digits[1] as u16) << 4) | (self.digits[2] as u16)
+    }
+
+    fn segment(&self, base: usize) -> u32 {
+        (3..9).fold(0, |s, i| {
+            s + u32::from(*self.digits.get(base + i).unwrap_or(&0)) * 10_u32.pow(9 - i as u32)
+        })
+    }
+
+    fn group_prefix(&self, length: usize) -> u32 {
+        let mut digits = 0;
+        for &digit in &self.digits[3..length + 3] {
+            digits = (digits << 4) | digit as u32;
+        }
+        digits
+    }
 }
 
 impl Isbn13 {
@@ -371,10 +438,6 @@ impl Isbn13 {
         }
     }
 
-    fn ean_ucc_group(&self) -> Result<Group, IsbnError> {
-        Isbn::get_ean_ucc_group(self.prefix_element(), self.segment(0))
-    }
-
     /// Hyphenate an ISBN-13 into its parts:
     ///
     /// * GS1 Prefix
@@ -393,36 +456,7 @@ impl Isbn13 {
     /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
     /// returned.
     pub fn hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
-        let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
-        let registrant_segment_length = Isbn::get_registration_group(
-            self.prefix_element(),
-            self.group_prefix(registration_group_segment_length),
-            self.segment(registration_group_segment_length),
-        )?
-        .segment_length;
-        let hyphen_at = [
-            registration_group_segment_length,
-            registration_group_segment_length + registrant_segment_length,
-        ];
-
-        let mut hyphenated = ArrayString::new();
-
-        for &digit in &self.digits[0..3] {
-            hyphenated.push(convert_isbn_body(digit))
-        }
-        hyphenated.push('-');
-
-        for (i, &digit) in self.digits[3..12].iter().enumerate() {
-            if hyphen_at.contains(&i) {
-                hyphenated.push('-')
-            }
-            hyphenated.push(convert_isbn_body(digit));
-        }
-
-        hyphenated.push('-');
-        hyphenated.push(convert_isbn_body(self.digits[12]));
-
-        Ok(hyphenated)
+        self.trait_hyphenate()
     }
 
     /// Retrieve the name of the registration group.
@@ -437,32 +471,7 @@ impl Isbn13 {
     /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
     /// returned.
     pub fn registration_group(&self) -> Result<&str, IsbnError> {
-        let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
-
-        Ok(Isbn::get_registration_group(
-            self.prefix_element(),
-            self.group_prefix(registration_group_segment_length),
-            self.segment(registration_group_segment_length),
-        )?
-        .name)
-    }
-
-    fn prefix_element(&self) -> u16 {
-        ((self.digits[0] as u16) << 8) | ((self.digits[1] as u16) << 4) | (self.digits[2] as u16)
-    }
-
-    fn segment(&self, base: usize) -> u32 {
-        (3..9).fold(0, |s, i| {
-            s + u32::from(*self.digits.get(base + i).unwrap_or(&0)) * 10_u32.pow(9 - i as u32)
-        })
-    }
-
-    fn group_prefix(&self, length: usize) -> u32 {
-        let mut digits = 0;
-        for &digit in &self.digits[3..length + 3] {
-            digits = (digits << 4) | digit as u32;
-        }
-        digits
+        self.trait_registration_group()
     }
 }
 
