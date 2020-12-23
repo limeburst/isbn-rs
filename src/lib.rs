@@ -18,6 +18,7 @@
 //!
 //! [International Standard Book Number]: https://www.isbn-international.org/
 
+#![no_std]
 #![deny(clippy::missing_errors_doc)]
 #![deny(clippy::if_not_else)]
 
@@ -539,8 +540,6 @@ impl fmt::Display for IsbnError {
         }
     }
 }
-
-impl std::error::Error for IsbnError {}
 
 impl From<ParseIntError> for IsbnError {
     fn from(_: ParseIntError) -> Self {
