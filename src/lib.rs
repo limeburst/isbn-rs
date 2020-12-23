@@ -17,13 +17,13 @@
 //! ```
 //!
 //! [International Standard Book Number]: https://www.isbn-international.org/
-#![cfg_attr(not(feature="std"), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![deny(clippy::missing_errors_doc)]
 #![deny(clippy::if_not_else)]
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 pub mod range;
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 pub use range::IsbnRange;
 
 use core::char;

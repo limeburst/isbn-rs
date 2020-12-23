@@ -1,13 +1,13 @@
 use std::path::Path;
 
-use crate::{Group, Isbn, IsbnError, Isbn10, Isbn13, IsbnObject};
-use std::io::BufReader;
+use crate::{Group, Isbn, Isbn10, Isbn13, IsbnError, IsbnObject};
 use std::fs::File;
+use std::io::BufReader;
 
-use quick_xml::{events::Event, Reader};
-use std::str::FromStr;
-use std::num::NonZeroUsize;
 use arrayvec::ArrayString;
+use quick_xml::{events::Event, Reader};
+use std::num::NonZeroUsize;
+use std::str::FromStr;
 
 use indexmap::IndexMap;
 
@@ -24,6 +24,7 @@ pub struct IsbnRange {
     registration_group: IndexMap<(u16, u32), Segment>,
 }
 
+#[derive(Debug)]
 pub enum IsbnRangeError {
     NoIsbnRangeMessageTag,
     NoEanUccPrefixes,
@@ -32,56 +33,94 @@ pub enum IsbnRangeError {
     NoGroup,
     NoMessageDate,
     PrefixTooLong,
+    InvalidPrefixChar,
+    BadLengthString,
     LengthTooLarge,
+    BadRange,
     NoDashInRange,
-
+    Xml(quick_xml::Error),
+    WrongXmlStart,
+    MissingXmlStart,
+    WrongXmlBody,
+    WrongXmlEnd,
+    MissingXmlEnd,
+    FileError(std::io::Error),
 }
 
-fn read_xml_tag(reader: &mut Reader<BufReader<File>>, buf: &mut Vec<u8>, name: &[u8]) -> Option<String> {
-    match reader.read_event(buf).ok()? {
-        Event::Start(e) => if e.name() != name {
-            return None;
-        },
-        _ => return None,
+impl From<quick_xml::Error> for IsbnRangeError {
+    fn from(e: quick_xml::Error) -> Self {
+        Self::Xml(e)
+    }
+}
+
+impl From<std::io::Error> for IsbnRangeError {
+    fn from(e: std::io::Error) -> Self {
+        Self::FileError(e)
+    }
+}
+
+fn read_xml_tag(
+    reader: &mut Reader<BufReader<File>>,
+    buf: &mut Vec<u8>,
+    name: &[u8],
+) -> Result<String, IsbnRangeError> {
+    match reader.read_event(buf)? {
+        Event::Start(e) => {
+            if e.name() != name {
+                return Err(IsbnRangeError::WrongXmlStart);
+            }
+        }
+        _ => return Err(IsbnRangeError::MissingXmlStart),
     };
     buf.clear();
-    let res = match reader.read_event(buf).ok()? {
-        Event::Text(e) => e.unescape_and_decode(&reader).ok()?,
-        _ => return None,
+    let res = match reader.read_event(buf)? {
+        Event::Text(e) => e.unescape_and_decode(&reader)?,
+        _ => return Err(IsbnRangeError::WrongXmlBody),
     };
-    match reader.read_event(buf).ok()? {
-        Event::End(e) => if e.name() != name {
-            return None;
-        },
-        _ => return None,
+    match reader.read_event(buf)? {
+        Event::End(e) => {
+            if e.name() != name {
+                return Err(IsbnRangeError::WrongXmlEnd);
+            }
+        }
+        _ => return Err(IsbnRangeError::MissingXmlEnd),
     };
     buf.clear();
-    Some(res)
+    Ok(res)
 }
 
 impl Segment {
-    fn from_reader(reader: &mut Reader<BufReader<File>>, buf: &mut Vec<u8>) -> Option<Self> {
+    fn from_reader(
+        reader: &mut Reader<BufReader<File>>,
+        buf: &mut Vec<u8>,
+    ) -> Result<Self, IsbnRangeError> {
         let name = read_xml_tag(reader, buf, b"Agency")?;
 
         let mut ranges = Vec::new();
 
-        match reader.read_event(buf).ok()? {
-            Event::Start(e) => if e.name() != b"Rules" {
-                return None;
-            },
-            _ => return None,
+        match reader.read_event(buf)? {
+            Event::Start(e) => {
+                if e.name() != b"Rules" {
+                    return Err(IsbnRangeError::WrongXmlStart);
+                }
+            }
+            _ => return Err(IsbnRangeError::MissingXmlStart),
         };
         buf.clear();
 
         loop {
-            match reader.read_event(buf).ok()? {
-                Event::Start(e) => if e.name() != b"Rule" {
-                    return None;
-                },
-                Event::End(e) => if e.name() == b"Rules" {
-                    break;
+            match reader.read_event(buf)? {
+                Event::Start(e) => {
+                    if e.name() != b"Rule" {
+                        return Err(IsbnRangeError::WrongXmlStart);
+                    }
                 }
-                _ => return None,
+                Event::End(e) => {
+                    if e.name() == b"Rules" {
+                        break;
+                    }
+                }
+                _ => return Err(IsbnRangeError::MissingXmlStart),
             };
             buf.clear();
 
@@ -90,42 +129,47 @@ impl Segment {
 
             ranges.push((
                 {
-                    let mid = range.find("-")?;
+                    let mid = range.find("-").ok_or(IsbnRangeError::NoDashInRange)?;
                     let (a, b) = range.split_at(mid);
-                    (u32::from_str(a).ok()?, u32::from_str(b.split_at(1).1).ok()?)
-                }
-                ,
-                {
-                    assert_eq!(length.len(), 1);
-                    let length = usize::from_str_radix(&length, 10).ok()?;
-                    assert!(length <= 7);
-                    NonZeroUsize::new(length)
-                })
-            );
-
-            match reader.read_event(buf).ok()? {
-                Event::End(e) => if e.name() != b"Rule" {
-                    return None;
+                    (
+                        u32::from_str(a).map_err(|_| IsbnRangeError::BadRange)?,
+                        u32::from_str(b.split_at(1).1).map_err(|_| IsbnRangeError::BadRange)?,
+                    )
                 },
-                _ => return None,
+                {
+                    if length.len() != 1 {
+                        return Err(IsbnRangeError::BadLengthString);
+                    }
+                    let length = usize::from_str_radix(&length, 10)
+                        .map_err(|_| IsbnRangeError::BadLengthString)?;
+                    if length > 7 {
+                        return Err(IsbnRangeError::LengthTooLarge);
+                    }
+                    NonZeroUsize::new(length)
+                },
+            ));
+
+            match reader.read_event(buf)? {
+                Event::End(e) => {
+                    if e.name() != b"Rule" {
+                        return Err(IsbnRangeError::WrongXmlEnd);
+                    }
+                }
+                _ => return Err(IsbnRangeError::MissingXmlEnd),
             };
             buf.clear();
-
         }
 
-        match reader.read_event(buf).ok()? {
+        match reader.read_event(buf)? {
             Event::End(e) => match e.name() {
-                b"EAN.UCC" | b"Group" => {},
-                _ => return None,
+                b"EAN.UCC" | b"Group" => {}
+                _ => return Err(IsbnRangeError::WrongXmlEnd),
             },
-            _ => return None,
+            _ => return Err(IsbnRangeError::MissingXmlEnd),
         };
         buf.clear();
 
-        Some(Segment {
-            name,
-            ranges,
-        })
+        Ok(Segment { name, ranges })
     }
 
     fn group(&self, segment: u32) -> Result<Group, IsbnError> {
@@ -134,72 +178,118 @@ impl Segment {
                 let segment_length = usize::from(length.ok_or(IsbnError::UndefinedRange)?);
                 return Ok(Group {
                     name: &self.name,
-                    segment_length
-                })
+                    segment_length,
+                });
             }
         }
         Err(IsbnError::InvalidGroup)
     }
 }
 impl IsbnRange {
-    fn read_ean_ucc_group(reader: &mut Reader<BufReader<File>>, buf: &mut Vec<u8>) -> Option<IndexMap<u16, Segment>> {
+    fn read_ean_ucc_group(
+        reader: &mut Reader<BufReader<File>>,
+        buf: &mut Vec<u8>,
+    ) -> Result<IndexMap<u16, Segment>, IsbnRangeError> {
         buf.clear();
         let mut res = IndexMap::new();
         loop {
-            match reader.read_event(buf).ok()? {
-                Event::Start(e) => if e.name() != b"EAN.UCC" { return None; },
-                Event::End(e) if e.name() == b"EAN.UCCPrefixes" => {
-                    return Some(res);
+            match reader.read_event(buf)? {
+                Event::Start(e) => {
+                    if e.name() != b"EAN.UCC" {
+                        return Err(IsbnRangeError::NoEanUccPrefix);
+                    }
                 }
-                _ => return None,
+                Event::End(e) if e.name() == b"EAN.UCCPrefixes" => {
+                    return Ok(res);
+                }
+                _ => return Err(IsbnRangeError::WrongXmlEnd),
             };
             buf.clear();
 
             let mut prefix_val = 0u16;
             for (i, char) in read_xml_tag(reader, buf, b"Prefix")?.chars().enumerate() {
-                assert!(i < 3);
-                prefix_val = (prefix_val << 4) | char.to_digit(10)? as u16;
-            };
+                if i == 3 {
+                    return Err(IsbnRangeError::PrefixTooLong);
+                }
+                prefix_val = (prefix_val << 4)
+                    | char.to_digit(10).ok_or(IsbnRangeError::InvalidPrefixChar)? as u16;
+            }
 
             res.insert(prefix_val, Segment::from_reader(reader, buf)?);
         }
     }
 
-    fn read_registration_group(reader: &mut Reader<BufReader<File>>, buf: &mut Vec<u8>) -> Option<IndexMap<(u16, u32), Segment>> {
+    fn read_registration_group(
+        reader: &mut Reader<BufReader<File>>,
+        buf: &mut Vec<u8>,
+    ) -> Result<IndexMap<(u16, u32), Segment>, IsbnRangeError> {
         buf.clear();
         let mut res = IndexMap::new();
         loop {
-            match reader.read_event(buf).ok()? {
-                Event::Start(e) => if e.name() != b"Group" { return None; },
-                Event::End(e) if e.name() == b"RegistrationGroups" => {
-                    return Some(res);
+            match reader.read_event(buf)? {
+                Event::Start(e) => {
+                    if e.name() != b"Group" {
+                        return Err(IsbnRangeError::NoGroup);
+                    }
                 }
-                _ => return None,
+                Event::End(e) if e.name() == b"RegistrationGroups" => {
+                    return Ok(res);
+                }
+                _ => return Err(IsbnRangeError::WrongXmlEnd),
             };
             buf.clear();
 
             let mut prefix_val = 0u16;
             let mut registration_group_element = 0u32;
             for (i, char) in read_xml_tag(reader, buf, b"Prefix")?.chars().enumerate() {
-                if i < 3 {
-                    prefix_val = (prefix_val << 4) | char.to_digit(10)? as u16;
-                } else if i >= 4 {
-                    registration_group_element = (registration_group_element << 4) | char.to_digit(10)?;
+                match i {
+                    0..=2 => {
+                        prefix_val = (prefix_val << 4)
+                            | char.to_digit(10).ok_or(IsbnRangeError::InvalidPrefixChar)? as u16;
+                    }
+                    3 => {
+                        if char != '-' {
+                            return Err(IsbnRangeError::PrefixTooLong);
+                        }
+                    }
+                    _ => {
+                        registration_group_element = (registration_group_element << 4)
+                            | char.to_digit(10).ok_or(IsbnRangeError::InvalidPrefixChar)?;
+                    }
                 }
-            };
+            }
 
-            res.insert((prefix_val, registration_group_element), Segment::from_reader(reader, buf)?);
+            res.insert(
+                (prefix_val, registration_group_element),
+                Segment::from_reader(reader, buf)?,
+            );
         }
     }
 
-    pub fn from_file<P: AsRef<Path>>(p: P) -> Option<Self> {
-        let mut reader = Reader::from_reader(BufReader::new(File::open(p).ok()?));
+    /// Opens the RangeMessage.xml file and loads the ranges into memory.
+    ///
+    /// ```
+    /// use isbn2::{Isbn, Isbn10, Isbn13, IsbnRange};
+    ///
+    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
+    /// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
+    /// let isbn_13 = Isbn::_13(Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap());
+    ///
+    /// assert_eq!(isbn_ranges.hyphenate_isbn(&isbn_10).unwrap().as_str(), "89-6626-126-4");
+    /// assert_eq!(isbn_ranges.hyphenate_isbn(&isbn_13).unwrap().as_str(), "978-1-4920-6766-5");
+    /// ```
+    /// # Errors
+    /// If the RangeMessage is in an unexpected format or does not exist, an error will be returned.
+    pub fn from_file<P: AsRef<Path>>(p: P) -> Result<Self, IsbnRangeError> {
+        let mut reader = Reader::from_reader(BufReader::new(File::open(p)?));
         reader.trim_text(true);
         let mut buf = Vec::new();
         loop {
-            match reader.read_event(&mut buf).ok()? {
-                Event::Start(e) => if e.name() == b"ISBNRangeMessage" {
-                    break;
+            match reader.read_event(&mut buf)? {
+                Event::Start(e) => {
+                    if e.name() == b"ISBNRangeMessage" {
+                        break;
+                    }
                 }
                 _ => {}
             }
@@ -207,27 +297,31 @@ impl IsbnRange {
         }
 
         let _ = read_xml_tag(&mut reader, &mut buf, b"MessageSource");
-        let serial_number = read_xml_tag(&mut reader, &mut buf, b"MessageSerialNumber");
+        let serial_number = read_xml_tag(&mut reader, &mut buf, b"MessageSerialNumber").ok();
         let date = read_xml_tag(&mut reader, &mut buf, b"MessageDate")?;
 
-        match reader.read_event(&mut buf).ok()? {
-            Event::Start(e) => if e.name() != b"EAN.UCCPrefixes" {
-                return None;
+        match reader.read_event(&mut buf)? {
+            Event::Start(e) => {
+                if e.name() != b"EAN.UCCPrefixes" {
+                    return Err(IsbnRangeError::NoEanUccPrefixes);
+                }
             }
             _ => {}
         }
         buf.clear();
         let ean_ucc_group = Self::read_ean_ucc_group(&mut reader, &mut buf)?;
-        match reader.read_event(&mut buf).ok()? {
-            Event::Start(e) => if e.name() != b"RegistrationGroups" {
-                return None;
+        match reader.read_event(&mut buf)? {
+            Event::Start(e) => {
+                if e.name() != b"RegistrationGroups" {
+                    return Err(IsbnRangeError::NoRegistrationGroups);
+                }
             }
             _ => {}
         }
 
         buf.clear();
         let registration_group = Self::read_registration_group(&mut reader, &mut buf)?;
-        Some(IsbnRange {
+        Ok(IsbnRange {
             serial_number,
             date,
             ean_ucc_group,
@@ -235,6 +329,27 @@ impl IsbnRange {
         })
     }
 
+    /// Hyphenate an ISBN into its parts:
+    ///
+    /// * GS1 Prefix (ISBN-13 only)
+    /// * Registration group
+    /// * Registrant
+    /// * Publication
+    /// * Check digit
+    ///
+    /// ```
+    /// use isbn2::{Isbn, Isbn10, Isbn13, IsbnRange};
+    ///
+    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
+    /// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
+    /// let isbn_13 = Isbn::_13(Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap());
+    ///
+    /// assert_eq!(isbn_ranges.hyphenate_isbn(&isbn_10).unwrap().as_str(), "89-6626-126-4");
+    /// assert_eq!(isbn_ranges.hyphenate_isbn(&isbn_13).unwrap().as_str(), "978-1-4920-6766-5");
+    /// ```
+    /// # Errors
+    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
+    /// returned.
     pub fn hyphenate_isbn(&self, isbn: &Isbn) -> Result<ArrayString<[u8; 17]>, IsbnError> {
         match isbn {
             Isbn::_10(isbn) => self.hyphenate_isbn_object(isbn),
@@ -242,19 +357,68 @@ impl IsbnRange {
         }
     }
 
+    /// Hyphenate an ISBN-10 into its parts:
+    ///
+    /// * Registration group
+    /// * Registrant
+    /// * Publication
+    /// * Check digit
+    ///
+    /// ```
+    /// use isbn2::{Isbn10, IsbnRange};
+    ///
+    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
+    /// let isbn_10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
+    /// assert_eq!(isbn_ranges.hyphenate_isbn10(&isbn_10).unwrap().as_str(), "89-6626-126-4");
+    /// ```
+    /// # Errors
+    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
+    /// returned.
     pub fn hyphenate_isbn10(&self, isbn: &Isbn10) -> Result<ArrayString<[u8; 17]>, IsbnError> {
         self.hyphenate_isbn_object(isbn)
     }
 
+    /// Hyphenate an ISBN-13 into its parts:
+    ///
+    /// * GS1 Prefix
+    /// * Registration group
+    /// * Registrant
+    /// * Publication
+    /// * Check digit
+    ///
+    /// ```
+    /// use isbn2::{Isbn13, IsbnRange};
+    ///
+    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
+    /// let isbn_13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
+    /// assert_eq!(isbn_ranges.hyphenate_isbn13(&isbn_13).unwrap().as_str(), "978-1-4920-6766-5");
+    /// ```
+    /// # Errors
+    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
+    /// returned.
     pub fn hyphenate_isbn13(&self, isbn: &Isbn13) -> Result<ArrayString<[u8; 17]>, IsbnError> {
         self.hyphenate_isbn_object(isbn)
     }
 
-    fn hyphenate_isbn_object(&self, isbn: &impl IsbnObject) -> Result<ArrayString<[u8; 17]>, IsbnError> {
-        let segment = self.ean_ucc_group.get(&isbn.prefix_element()).ok_or(IsbnError::InvalidGroup)?;
+    fn hyphenate_isbn_object(
+        &self,
+        isbn: &impl IsbnObject,
+    ) -> Result<ArrayString<[u8; 17]>, IsbnError> {
+        let segment = self
+            .ean_ucc_group
+            .get(&isbn.prefix_element())
+            .ok_or(IsbnError::InvalidGroup)?;
         let registration_group_segment_length = segment.group(isbn.segment(0))?.segment_length;
-        let segment = self.registration_group.get(&(isbn.prefix_element(), isbn.group_prefix(registration_group_segment_length))).ok_or(IsbnError::InvalidGroup)?;
-        let registrant_segment_length = segment.group(isbn.segment(registration_group_segment_length))?.segment_length;
+        let segment = self
+            .registration_group
+            .get(&(
+                isbn.prefix_element(),
+                isbn.group_prefix(registration_group_segment_length),
+            ))
+            .ok_or(IsbnError::InvalidGroup)?;
+        let registrant_segment_length = segment
+            .group(isbn.segment(registration_group_segment_length))?
+            .segment_length;
 
         let hyphen_at = [
             registration_group_segment_length,
@@ -262,6 +426,82 @@ impl IsbnRange {
         ];
 
         Ok(isbn.hyphenate_with(hyphen_at))
+    }
+
+    /// Retrieve the name of the registration group.
+    ///
+    /// ```
+    /// use isbn2::{Isbn, Isbn10, Isbn13, IsbnRange};
+    ///
+    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
+    /// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
+    /// let isbn_13 = Isbn::_13(Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap());
+    ///
+    /// assert_eq!(isbn_ranges.get_registration_group_isbn(&isbn_10), Ok("Korea, Republic"));
+    /// assert_eq!(isbn_ranges.get_registration_group_isbn(&isbn_13), Ok("English language"));
+    /// ```
+    ///
+    /// # Errors
+    /// If the ISBN is not valid, as determined by `self`, an error will be
+    /// returned.
+    pub fn get_registration_group_isbn(&self, isbn: &Isbn) -> Result<&str, IsbnError> {
+        match isbn {
+            Isbn::_10(isbn) => self.get_registration_group_isbn_object(isbn),
+            Isbn::_13(isbn) => self.get_registration_group_isbn_object(isbn),
+        }
+    }
+
+    /// Retrieve the name of the registration group.
+    ///
+    /// ```
+    /// use isbn2::{Isbn10, IsbnRange};
+    ///
+    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
+    /// let isbn_10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
+    /// assert_eq!(isbn_ranges.get_registration_group_isbn10(&isbn_10), Ok("Korea, Republic"));
+    /// ```
+    /// # Errors
+    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
+    /// returned.
+    pub fn get_registration_group_isbn10(&self, isbn: &Isbn10) -> Result<&str, IsbnError> {
+        self.get_registration_group_isbn_object(isbn)
+    }
+
+    /// Retrieve the name of the registration group.
+    ///
+    /// ```
+    /// use isbn2::{Isbn13, IsbnRange};
+    ///
+    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
+    /// let isbn_13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
+    /// assert_eq!(isbn_ranges.get_registration_group_isbn13(&isbn_13), Ok("English language"));
+    /// ```
+    /// # Errors
+    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
+    /// returned.
+    pub fn get_registration_group_isbn13(&self, isbn: &Isbn13) -> Result<&str, IsbnError> {
+        self.get_registration_group_isbn_object(isbn)
+    }
+
+    fn get_registration_group_isbn_object(
+        &self,
+        isbn: &impl IsbnObject,
+    ) -> Result<&str, IsbnError> {
+        let segment = self
+            .ean_ucc_group
+            .get(&isbn.prefix_element())
+            .ok_or(IsbnError::InvalidGroup)?;
+        let registration_group_segment_length = segment.group(isbn.segment(0))?.segment_length;
+        let segment = self
+            .registration_group
+            .get(&(
+                isbn.prefix_element(),
+                isbn.group_prefix(registration_group_segment_length),
+            ))
+            .ok_or(IsbnError::InvalidGroup)?;
+        Ok(&segment
+            .group(isbn.segment(registration_group_segment_length))?
+            .name)
     }
 }
 
@@ -271,13 +511,17 @@ mod test {
 
     #[test]
     fn test_isbn_range_opens() {
-        assert!(IsbnRange::from_file("./isbn-ranges/RangeMessage.xml").is_some());
+        assert!(IsbnRange::from_file("./isbn-ranges/RangeMessage.xml").is_ok());
     }
 
     #[test]
     fn test_hyphenation() {
         let range = IsbnRange::from_file("./isbn-ranges/RangeMessage.xml").unwrap();
-        assert!(range.hyphenate_isbn(&Isbn::from_str("0-9752298-0-X").unwrap()).is_ok());
-        assert!(range.hyphenate_isbn(&Isbn::from_str("978-3-16-148410-0").unwrap()).is_ok());
+        assert!(range
+            .hyphenate_isbn(&Isbn::from_str("0-9752298-0-X").unwrap())
+            .is_ok());
+        assert!(range
+            .hyphenate_isbn(&Isbn::from_str("978-3-16-148410-0").unwrap())
+            .is_ok());
     }
 }
