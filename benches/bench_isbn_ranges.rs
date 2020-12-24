@@ -1,4 +1,4 @@
-#![cfg(feature = "std")]
+#![cfg(feature = "runtime-ranges")]
 #![feature(test)]
 extern crate test;
 use test::Bencher;
@@ -9,6 +9,11 @@ use std::str::FromStr;
 
 fn open_range() -> IsbnRange {
     IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap()
+}
+
+#[bench]
+fn bench_open_range(b: &mut Bencher) {
+    b.iter(|| black_box(open_range()))
 }
 
 #[bench]
