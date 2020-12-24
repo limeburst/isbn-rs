@@ -511,7 +511,10 @@ impl IsbnRange {
     }
 
     pub fn serial_number(&self) -> Option<&str> {
-        self.serial_number.as_deref()
+        match &self.serial_number {
+            Some(s) => Some(s.as_str()),
+            None => None,
+        }
     }
 }
 
