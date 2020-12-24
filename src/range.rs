@@ -1,15 +1,14 @@
-use std::path::Path;
-
-use crate::{Group, Isbn, Isbn10, Isbn13, IsbnError, IsbnObject};
 use std::fs::File;
 use std::io::BufReader;
-
-use arrayvec::ArrayString;
-use quick_xml::{events::Event, Reader};
 use std::num::NonZeroUsize;
+use std::path::Path;
 use std::str::FromStr;
 
+use arrayvec::ArrayString;
 use indexmap::IndexMap;
+use quick_xml::{events::Event, Reader};
+
+use crate::{Group, Isbn, Isbn10, Isbn13, IsbnError, IsbnObject};
 
 struct Segment {
     name: String,
@@ -89,13 +88,27 @@ fn read_xml_tag(
     Ok(res)
 }
 
+fn read_xml_start(
+    reader: &mut Reader<BufReader<File>>,
+    buf: &mut Vec<u8>,
+    name: &[u8],
+) -> Result<bool, IsbnRangeError> {
+    if let Event::Start(e) = reader.read_event(buf)? {
+        let res = e.name() == name;
+        buf.clear();
+        Ok(res)
+    } else {
+        buf.clear();
+        Ok(false)
+    }
+}
+
 impl Segment {
     fn from_reader(
         reader: &mut Reader<BufReader<File>>,
         buf: &mut Vec<u8>,
     ) -> Result<Self, IsbnRangeError> {
         let name = read_xml_tag(reader, buf, b"Agency")?;
-
         let mut ranges = Vec::new();
 
         match reader.read_event(buf)? {
@@ -129,7 +142,7 @@ impl Segment {
 
             ranges.push((
                 {
-                    let mid = range.find("-").ok_or(IsbnRangeError::NoDashInRange)?;
+                    let mid = range.find('-').ok_or(IsbnRangeError::NoDashInRange)?;
                     let (a, b) = range.split_at(mid);
                     (
                         u32::from_str(a).map_err(|_| IsbnRangeError::BadRange)?,
@@ -289,42 +302,27 @@ impl IsbnRange {
         reader.trim_text(true);
         let mut buf = Vec::new();
         loop {
-            match reader.read_event(&mut buf)? {
-                Event::Start(e) => {
-                    if e.name() == b"ISBNRangeMessage" {
-                        break;
-                    }
-                }
-                _ => {}
+            if read_xml_start(&mut reader, &mut buf, b"ISBNRangeMessage")? {
+                break;
             }
-            buf.clear();
         }
 
         let _ = read_xml_tag(&mut reader, &mut buf, b"MessageSource");
         let serial_number = read_xml_tag(&mut reader, &mut buf, b"MessageSerialNumber").ok();
         let date = read_xml_tag(&mut reader, &mut buf, b"MessageDate")?;
 
-        match reader.read_event(&mut buf)? {
-            Event::Start(e) => {
-                if e.name() != b"EAN.UCCPrefixes" {
-                    return Err(IsbnRangeError::NoEanUccPrefixes);
-                }
-            }
-            _ => {}
-        }
-        buf.clear();
-        let ean_ucc_group = Self::read_ean_ucc_group(&mut reader, &mut buf)?;
-        match reader.read_event(&mut buf)? {
-            Event::Start(e) => {
-                if e.name() != b"RegistrationGroups" {
-                    return Err(IsbnRangeError::NoRegistrationGroups);
-                }
-            }
-            _ => {}
+        if !read_xml_start(&mut reader, &mut buf, b"EAN.UCCPrefixes")? {
+            return Err(IsbnRangeError::NoEanUccPrefixes);
         }
 
-        buf.clear();
+        let ean_ucc_group = Self::read_ean_ucc_group(&mut reader, &mut buf)?;
+
+        if !read_xml_start(&mut reader, &mut buf, b"RegistrationGroups")? {
+            return Err(IsbnRangeError::NoRegistrationGroups);
+        }
+
         let registration_group = Self::read_registration_group(&mut reader, &mut buf)?;
+
         Ok(IsbnRange {
             serial_number,
             date,
@@ -506,6 +504,14 @@ impl IsbnRange {
         Ok(&segment
             .group(isbn.segment(registration_group_segment_length))?
             .name)
+    }
+
+    pub fn date(&self) -> &str {
+        &self.date
+    }
+
+    pub fn serial_number(&self) -> Option<&str> {
+        self.serial_number.as_deref()
     }
 }
 
