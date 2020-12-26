@@ -17,6 +17,7 @@ struct Segment {
 }
 
 pub struct IsbnRange {
+    source: Option<String>,
     serial_number: Option<String>,
     date: String,
     ean_ucc_group: IndexMap<u16, Segment>,
@@ -307,9 +308,39 @@ impl IsbnRange {
             }
         }
 
-        let _ = read_xml_tag(&mut reader, &mut buf, b"MessageSource");
-        let serial_number = read_xml_tag(&mut reader, &mut buf, b"MessageSerialNumber").ok();
-        let date = read_xml_tag(&mut reader, &mut buf, b"MessageDate")?;
+        let m_source = b"MessageSource";
+        let m_serial_number = b"MessageSerialNumber";
+        let m_date = b"MessageDate";
+        let mut fields = vec![m_date.as_ref(), m_serial_number.as_ref(), m_source.as_ref()];
+        let mut vals = vec![];
+        while !fields.is_empty() {
+            let mut buf1 = Vec::new();
+            let mut buf2 = Vec::new();
+            let e1 = reader.read_event(&mut buf)?;
+            let e2 = reader.read_event(&mut buf1)?;
+            let e3 = reader.read_event(&mut buf2)?;
+            match (e1, e2, e3) {
+                (Event::Start(es), Event::Text(et), Event::End(ee)) => {
+                    while let Some(name) = fields.pop() {
+                        if es.name() == name {
+                            vals.push(Some(et.unescape_and_decode(&reader)?));
+                            if ee.name() != name {
+                                return Err(IsbnRangeError::WrongXmlEnd);
+                            }
+                            break;
+                        } else {
+                            vals.push(None);
+                        }
+                    }
+                }
+                _ => return Err(IsbnRangeError::MissingXmlStart),
+            }
+            buf.clear();
+        }
+
+        let date = vals.pop().flatten().ok_or(IsbnRangeError::NoMessageDate)?;
+        let serial_number = vals.pop().expect("This error should not be possible");
+        let source = vals.pop().expect("This error should not be possible");
 
         if !read_xml_start(&mut reader, &mut buf, b"EAN.UCCPrefixes")? {
             return Err(IsbnRangeError::NoEanUccPrefixes);
@@ -324,6 +355,7 @@ impl IsbnRange {
         let registration_group = Self::read_registration_group(&mut reader, &mut buf)?;
 
         Ok(IsbnRange {
+            source,
             serial_number,
             date,
             ean_ucc_group,
@@ -516,6 +548,13 @@ impl IsbnRange {
             None => None,
         }
     }
+
+    pub fn source(&self) -> Option<&str> {
+        match &self.source {
+            Some(s) => Some(s.as_str()),
+            None => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -524,7 +563,13 @@ mod test {
 
     #[test]
     fn test_isbn_range_opens() {
-        assert!(IsbnRange::from_file("./isbn-ranges/RangeMessage.xml").is_ok());
+        let range = IsbnRange::from_file("./isbn-ranges/RangeMessage.xml");
+        assert!(range.is_ok());
+        let range = range.unwrap();
+        assert_eq!(
+            range.source,
+            Some(String::from("International ISBN Agency"))
+        );
     }
 
     #[test]
