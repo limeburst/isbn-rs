@@ -25,6 +25,8 @@
 pub mod range;
 #[cfg(feature = "runtime-ranges")]
 pub use range::IsbnRange;
+#[cfg(feature = "serialize")]
+use serde::{Deserialize, Serialize};
 
 use core::char;
 use core::fmt;
@@ -96,7 +98,8 @@ trait IsbnObject {
 /// assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
 /// assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
 /// ```
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Eq)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Isbn {
     _10(Isbn10),
     _13(Isbn13),
@@ -196,7 +199,8 @@ fn convert_isbn10_check(d: u8) -> char {
 }
 
 /// 10-digit ISBN format.
-#[derive(Debug, PartialEq, Copy, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Isbn10 {
     digits: [u8; 10],
 }
@@ -359,7 +363,8 @@ impl FromStr for Isbn10 {
 }
 
 /// 13-digit ISBN format.
-#[derive(Debug, PartialEq, Copy, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Isbn13 {
     digits: [u8; 13],
 }
