@@ -190,7 +190,7 @@ fn convert_isbn_body(d: u8) -> char {
 }
 
 /// Used to convert ISBN digits into chars, including the last digit of ISBN10.
-fn convert_isbn10_check(d: u8) -> char {
+const fn convert_isbn10_check(d: u8) -> char {
     if d < 11 {
         ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'X'][d as usize]
     } else {
