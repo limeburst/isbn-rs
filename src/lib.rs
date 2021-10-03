@@ -39,12 +39,12 @@ pub type IsbnResult<T> = Result<T, IsbnError>;
 
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
-pub struct Group<'a> {
+struct Group<'a> {
     name: &'a str,
     segment_length: usize,
 }
 
-pub trait IsbnObject {
+trait IsbnObject {
     fn ean_ucc_group(&self) -> Result<Group, IsbnError> {
         Isbn::get_ean_ucc_group(self.prefix_element(), self.segment(0))
     }
@@ -156,33 +156,44 @@ impl Isbn {
     }
 }
 
-impl IsbnObject for Isbn {
-    fn hyphenate_with(&self, hyphen_at: [usize; 2]) -> ArrayString<17> {
-        match self {
-            Isbn::_10(isbn) => isbn.hyphenate_with(hyphen_at),
-            Isbn::_13(isbn) => isbn.hyphenate_with(hyphen_at),
+/// An International Standard Book Number, either ISBN10 or ISBN13.
+///
+/// # Examples
+///
+/// ```
+/// use isbn2::{Isbn, Isbn10, Isbn13};
+///
+/// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
+/// let isbn_13 = Isbn::_13(Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap());
+///
+/// assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
+/// assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
+/// ```
+#[derive(Debug, PartialEq, Clone, Eq)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+pub enum IsbnRef<'a> {
+    _10(&'a Isbn10),
+    _13(&'a Isbn13),
+}
+
+impl<'a> From<&'a Isbn> for IsbnRef<'a> {
+    fn from(isbn: &'a Isbn) -> Self {
+        match isbn {
+            Isbn::_10(isbn) => isbn.into(),
+            Isbn::_13(isbn) => isbn.into()
         }
     }
+}
 
-    fn prefix_element(&self) -> u16 {
-        match self {
-            Isbn::_10(isbn) => isbn.prefix_element(),
-            Isbn::_13(isbn) => isbn.prefix_element(),
-        }
+impl<'a> From<&'a Isbn10> for IsbnRef<'a> {
+    fn from(isbn: &'a Isbn10) -> Self {
+        IsbnRef::_10(isbn)
     }
+}
 
-    fn segment(&self, base: usize) -> u32 {
-        match self {
-            Isbn::_10(isbn) => isbn.segment(base),
-            Isbn::_13(isbn) => isbn.segment(base),
-        }
-    }
-
-    fn group_prefix(&self, length: usize) -> u32 {
-        match self {
-            Isbn::_10(isbn) => isbn.group_prefix(length),
-            Isbn::_13(isbn) => isbn.group_prefix(length),
-        }
+impl<'a> From<&'a Isbn13> for IsbnRef<'a> {
+    fn from(isbn: &'a Isbn13) -> Self {
+        IsbnRef::_13(isbn)
     }
 }
 

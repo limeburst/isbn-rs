@@ -8,7 +8,7 @@ use arrayvec::ArrayString;
 use indexmap::IndexMap;
 use quick_xml::{events::Event, Reader};
 
-use crate::{Group, Isbn, Isbn10, Isbn13, IsbnError, IsbnObject};
+use crate::{Group, IsbnError, IsbnObject, IsbnRef};
 
 struct Segment {
     name: String,
@@ -300,7 +300,7 @@ impl IsbnRange {
     /// # Errors
     /// If the RangeMessage is in an unexpected format or does not exist, an error will be returned.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, IsbnRangeError> {
-        let reader = BufReader::new(File::open("isbn-ranges/RangeMessage.xml")?);
+        let reader = BufReader::new(File::open(path)?);
         Self::from_reader(reader)
     }
 
@@ -413,7 +413,14 @@ impl IsbnRange {
     /// # Errors
     /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
     /// returned.
-    pub fn hyphenate<I: IsbnObject>(&self, isbn: &I) -> Result<ArrayString<17>, IsbnError> {
+    pub fn hyphenate<'a, I: Into<IsbnRef<'a>>>(&self, isbn: I) -> Result<ArrayString<17>, IsbnError> {
+        match isbn.into() {
+            IsbnRef::_10(isbn) => self.hyphenate_isbn(isbn),
+            IsbnRef::_13(isbn) => self.hyphenate_isbn(isbn),
+        }
+    }
+
+    fn hyphenate_isbn<I: IsbnObject>(&self, isbn: &I) -> Result<ArrayString<17>, IsbnError> {
         let segment = self
             .ean_ucc_group
             .get(&isbn.prefix_element())
@@ -455,7 +462,14 @@ impl IsbnRange {
     /// # Errors
     /// If the ISBN is not valid, as determined by `self`, an error will be
     /// returned.
-    pub fn get_registration_group<I: IsbnObject>(&self, isbn: &I) -> Result<&str, IsbnError> {
+    pub fn get_registration_group<'a, I: Into<IsbnRef<'a>>>(&self, isbn: I) -> Result<&str, IsbnError> {
+        match isbn.into() {
+            IsbnRef::_10(isbn) => self.get_registration_group_isbn(isbn),
+            IsbnRef::_13(isbn) => self.get_registration_group_isbn(isbn),
+        }
+    }
+
+    fn get_registration_group_isbn<I: IsbnObject>(&self, isbn: &I) -> Result<&str, IsbnError> {
         let segment = self
             .ean_ucc_group
             .get(&isbn.prefix_element())
@@ -494,6 +508,7 @@ impl IsbnRange {
 
 #[cfg(test)]
 mod test {
+    use crate::Isbn;
     use super::*;
 
     #[test]
