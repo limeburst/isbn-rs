@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 use std::num::NonZeroUsize;
 use std::path::Path;
 use std::str::FromStr;
@@ -59,8 +59,8 @@ impl From<std::io::Error> for IsbnRangeError {
     }
 }
 
-fn read_xml_tag(
-    reader: &mut Reader<BufReader<File>>,
+fn read_xml_tag<B: BufRead>(
+    reader: &mut Reader<B>,
     buf: &mut Vec<u8>,
     name: &[u8],
 ) -> Result<String, IsbnRangeError> {
@@ -89,8 +89,8 @@ fn read_xml_tag(
     Ok(res)
 }
 
-fn read_xml_start(
-    reader: &mut Reader<BufReader<File>>,
+fn read_xml_start<B: BufRead>(
+    reader: &mut Reader<B>,
     buf: &mut Vec<u8>,
     name: &[u8],
 ) -> Result<bool, IsbnRangeError> {
@@ -105,8 +105,8 @@ fn read_xml_start(
 }
 
 impl Segment {
-    fn from_reader(
-        reader: &mut Reader<BufReader<File>>,
+    fn from_reader<B: BufRead>(
+        reader: &mut Reader<B>,
         buf: &mut Vec<u8>,
     ) -> Result<Self, IsbnRangeError> {
         let name = read_xml_tag(reader, buf, b"Agency")?;
@@ -199,9 +199,10 @@ impl Segment {
         Err(IsbnError::InvalidGroup)
     }
 }
+
 impl IsbnRange {
-    fn read_ean_ucc_group(
-        reader: &mut Reader<BufReader<File>>,
+    fn read_ean_ucc_group<B: BufRead>(
+        reader: &mut Reader<B>,
         buf: &mut Vec<u8>,
     ) -> Result<IndexMap<u16, Segment>, IsbnRangeError> {
         buf.clear();
@@ -233,8 +234,8 @@ impl IsbnRange {
         }
     }
 
-    fn read_registration_group(
-        reader: &mut Reader<BufReader<File>>,
+    fn read_registration_group<B: BufRead>(
+        reader: &mut Reader<B>,
         buf: &mut Vec<u8>,
     ) -> Result<IndexMap<(u16, u32), Segment>, IsbnRangeError> {
         buf.clear();
@@ -280,8 +281,8 @@ impl IsbnRange {
         }
     }
 
-    /// Opens the RangeMessage.xml file and loads the ranges into memory. Should be used if the
-    /// ISBN ranges need to be current. Up-to-date ISBN ranges can be downloaded from the following
+    /// Reads the ISB ranges from the given reader. Should be used if the ISBN ranges need to be
+    /// current. Up-to-date ISBN ranges can be downloaded from the following
     /// sources:
     /// * https://www.isbn-international.org/export_rangemessage.xml
     /// * https://github.com/philippeitis/isbn-ranges/blob/master/RangeMessage.xml
@@ -289,17 +290,44 @@ impl IsbnRange {
     /// ```
     /// use isbn2::{Isbn, Isbn10, Isbn13, IsbnRange};
     ///
-    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
+    /// let isbn_ranges = IsbnRange::from_path("isbn-ranges/RangeMessage.xml").unwrap();
     /// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
     /// let isbn_13 = Isbn::_13(Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap());
     ///
-    /// assert_eq!(isbn_ranges.hyphenate_isbn(&isbn_10).unwrap().as_str(), "89-6626-126-4");
-    /// assert_eq!(isbn_ranges.hyphenate_isbn(&isbn_13).unwrap().as_str(), "978-1-4920-6766-5");
+    /// assert_eq!(isbn_ranges.hyphenate(&isbn_10).unwrap().as_str(), "89-6626-126-4");
+    /// assert_eq!(isbn_ranges.hyphenate(&isbn_13).unwrap().as_str(), "978-1-4920-6766-5");
     /// ```
     /// # Errors
     /// If the RangeMessage is in an unexpected format or does not exist, an error will be returned.
-    pub fn from_file<P: AsRef<Path>>(p: P) -> Result<Self, IsbnRangeError> {
-        let mut reader = Reader::from_reader(BufReader::new(File::open(p)?));
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, IsbnRangeError> {
+        let reader = BufReader::new(File::open("isbn-ranges/RangeMessage.xml")?);
+        Self::from_reader(reader)
+    }
+
+    /// Reads the ISBN ranges from the given reader. Should be used if the ISBN ranges need to be
+    /// current. Up-to-date ISBN ranges can be downloaded from the following
+    /// sources:
+    /// * https://www.isbn-international.org/export_rangemessage.xml
+    /// * https://github.com/philippeitis/isbn-ranges/blob/master/RangeMessage.xml
+    ///
+    /// ```
+    /// use isbn2::{Isbn, Isbn10, Isbn13, IsbnRange};
+    /// use std::io::BufReader;
+    /// use std::fs::File;
+    ///
+    /// let reader = BufReader::new(File::open("isbn-ranges/RangeMessage.xml").unwrap());
+    /// let isbn_ranges = IsbnRange::from_reader(reader).unwrap();
+    ///
+    /// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
+    /// let isbn_13 = Isbn::_13(Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap());
+    ///
+    /// assert_eq!(isbn_ranges.hyphenate(&isbn_10).unwrap().as_str(), "89-6626-126-4");
+    /// assert_eq!(isbn_ranges.hyphenate(&isbn_13).unwrap().as_str(), "978-1-4920-6766-5");
+    /// ```
+    /// # Errors
+    /// If the RangeMessage is in an unexpected format or does not exist, an error will be returned.
+    pub fn from_reader<B: BufRead>(reader: B) -> Result<Self, IsbnRangeError> {
+        let mut reader = Reader::from_reader(reader);
         reader.trim_text(true);
         let mut buf = Vec::new();
         loop {
@@ -374,70 +402,18 @@ impl IsbnRange {
     /// ```
     /// use isbn2::{Isbn, Isbn10, Isbn13, IsbnRange};
     ///
-    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
-    /// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
-    /// let isbn_13 = Isbn::_13(Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap());
+    /// let isbn_ranges = IsbnRange::from_path("isbn-ranges/RangeMessage.xml").unwrap();
     ///
-    /// assert_eq!(isbn_ranges.hyphenate_isbn(&isbn_10).unwrap().as_str(), "89-6626-126-4");
-    /// assert_eq!(isbn_ranges.hyphenate_isbn(&isbn_13).unwrap().as_str(), "978-1-4920-6766-5");
-    /// ```
-    /// # Errors
-    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
-    /// returned.
-    pub fn hyphenate_isbn(&self, isbn: &Isbn) -> Result<ArrayString<[u8; 17]>, IsbnError> {
-        match isbn {
-            Isbn::_10(isbn) => self.hyphenate_isbn_object(isbn),
-            Isbn::_13(isbn) => self.hyphenate_isbn_object(isbn),
-        }
-    }
-
-    /// Hyphenate an ISBN-10 into its parts:
-    ///
-    /// * Registration group
-    /// * Registrant
-    /// * Publication
-    /// * Check digit
-    ///
-    /// ```
-    /// use isbn2::{Isbn10, IsbnRange};
-    ///
-    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
     /// let isbn_10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
-    /// assert_eq!(isbn_ranges.hyphenate_isbn10(&isbn_10).unwrap().as_str(), "89-6626-126-4");
-    /// ```
-    /// # Errors
-    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
-    /// returned.
-    pub fn hyphenate_isbn10(&self, isbn: &Isbn10) -> Result<ArrayString<[u8; 17]>, IsbnError> {
-        self.hyphenate_isbn_object(isbn)
-    }
-
-    /// Hyphenate an ISBN-13 into its parts:
-    ///
-    /// * GS1 Prefix
-    /// * Registration group
-    /// * Registrant
-    /// * Publication
-    /// * Check digit
-    ///
-    /// ```
-    /// use isbn2::{Isbn13, IsbnRange};
-    ///
-    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
     /// let isbn_13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
-    /// assert_eq!(isbn_ranges.hyphenate_isbn13(&isbn_13).unwrap().as_str(), "978-1-4920-6766-5");
+    ///
+    /// assert_eq!(isbn_ranges.hyphenate(&isbn_10).unwrap().as_str(), "89-6626-126-4");
+    /// assert_eq!(isbn_ranges.hyphenate(&isbn_13).unwrap().as_str(), "978-1-4920-6766-5");
     /// ```
     /// # Errors
     /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
     /// returned.
-    pub fn hyphenate_isbn13(&self, isbn: &Isbn13) -> Result<ArrayString<[u8; 17]>, IsbnError> {
-        self.hyphenate_isbn_object(isbn)
-    }
-
-    fn hyphenate_isbn_object(
-        &self,
-        isbn: &impl IsbnObject,
-    ) -> Result<ArrayString<[u8; 17]>, IsbnError> {
+    pub fn hyphenate<I: IsbnObject>(&self, isbn: &I) -> Result<ArrayString<17>, IsbnError> {
         let segment = self
             .ean_ucc_group
             .get(&isbn.prefix_element())
@@ -467,60 +443,19 @@ impl IsbnRange {
     /// ```
     /// use isbn2::{Isbn, Isbn10, Isbn13, IsbnRange};
     ///
-    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
-    /// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
-    /// let isbn_13 = Isbn::_13(Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap());
+    /// let isbn_ranges = IsbnRange::from_path("isbn-ranges/RangeMessage.xml").unwrap();
     ///
-    /// assert_eq!(isbn_ranges.get_registration_group_isbn(&isbn_10), Ok("Korea, Republic"));
-    /// assert_eq!(isbn_ranges.get_registration_group_isbn(&isbn_13), Ok("English language"));
+    /// let isbn_10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
+    /// let isbn_13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
+    ///
+    /// assert_eq!(isbn_ranges.get_registration_group(&isbn_10), Ok("Korea, Republic"));
+    /// assert_eq!(isbn_ranges.get_registration_group(&isbn_13), Ok("English language"));
     /// ```
     ///
     /// # Errors
     /// If the ISBN is not valid, as determined by `self`, an error will be
     /// returned.
-    pub fn get_registration_group_isbn(&self, isbn: &Isbn) -> Result<&str, IsbnError> {
-        match isbn {
-            Isbn::_10(isbn) => self.get_registration_group_isbn_object(isbn),
-            Isbn::_13(isbn) => self.get_registration_group_isbn_object(isbn),
-        }
-    }
-
-    /// Retrieve the name of the registration group.
-    ///
-    /// ```
-    /// use isbn2::{Isbn10, IsbnRange};
-    ///
-    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
-    /// let isbn_10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
-    /// assert_eq!(isbn_ranges.get_registration_group_isbn10(&isbn_10), Ok("Korea, Republic"));
-    /// ```
-    /// # Errors
-    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
-    /// returned.
-    pub fn get_registration_group_isbn10(&self, isbn: &Isbn10) -> Result<&str, IsbnError> {
-        self.get_registration_group_isbn_object(isbn)
-    }
-
-    /// Retrieve the name of the registration group.
-    ///
-    /// ```
-    /// use isbn2::{Isbn13, IsbnRange};
-    ///
-    /// let isbn_ranges = IsbnRange::from_file("isbn-ranges/RangeMessage.xml").unwrap();
-    /// let isbn_13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
-    /// assert_eq!(isbn_ranges.get_registration_group_isbn13(&isbn_13), Ok("English language"));
-    /// ```
-    /// # Errors
-    /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
-    /// returned.
-    pub fn get_registration_group_isbn13(&self, isbn: &Isbn13) -> Result<&str, IsbnError> {
-        self.get_registration_group_isbn_object(isbn)
-    }
-
-    fn get_registration_group_isbn_object(
-        &self,
-        isbn: &impl IsbnObject,
-    ) -> Result<&str, IsbnError> {
+    pub fn get_registration_group<I: IsbnObject>(&self, isbn: &I) -> Result<&str, IsbnError> {
         let segment = self
             .ean_ucc_group
             .get(&isbn.prefix_element())
@@ -563,7 +498,7 @@ mod test {
 
     #[test]
     fn test_isbn_range_opens() {
-        let range = IsbnRange::from_file("./isbn-ranges/RangeMessage.xml");
+        let range = IsbnRange::from_path("./isbn-ranges/RangeMessage.xml");
         assert!(range.is_ok());
         let range = range.unwrap();
         assert_eq!(
@@ -574,12 +509,12 @@ mod test {
 
     #[test]
     fn test_hyphenation() {
-        let range = IsbnRange::from_file("./isbn-ranges/RangeMessage.xml").unwrap();
+        let range = IsbnRange::from_path("./isbn-ranges/RangeMessage.xml").unwrap();
         assert!(range
-            .hyphenate_isbn(&Isbn::from_str("0-9752298-0-X").unwrap())
+            .hyphenate(&Isbn::from_str("0-9752298-0-X").unwrap())
             .is_ok());
         assert!(range
-            .hyphenate_isbn(&Isbn::from_str("978-3-16-148410-0").unwrap())
+            .hyphenate(&Isbn::from_str("978-3-16-148410-0").unwrap())
             .is_ok());
     }
 }

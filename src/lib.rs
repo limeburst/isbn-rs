@@ -39,12 +39,12 @@ pub type IsbnResult<T> = Result<T, IsbnError>;
 
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
-struct Group<'a> {
+pub struct Group<'a> {
     name: &'a str,
     segment_length: usize,
 }
 
-trait IsbnObject {
+pub trait IsbnObject {
     fn ean_ucc_group(&self) -> Result<Group, IsbnError> {
         Isbn::get_ean_ucc_group(self.prefix_element(), self.segment(0))
     }
@@ -152,6 +152,36 @@ impl Isbn {
         match self {
             Isbn::_10(ref c) => c.registration_group(),
             Isbn::_13(ref c) => c.registration_group(),
+        }
+    }
+}
+
+impl IsbnObject for Isbn {
+    fn hyphenate_with(&self, hyphen_at: [usize; 2]) -> ArrayString<17> {
+        match self {
+            Isbn::_10(isbn) => isbn.hyphenate_with(hyphen_at),
+            Isbn::_13(isbn) => isbn.hyphenate_with(hyphen_at),
+        }
+    }
+
+    fn prefix_element(&self) -> u16 {
+        match self {
+            Isbn::_10(isbn) => isbn.prefix_element(),
+            Isbn::_13(isbn) => isbn.prefix_element(),
+        }
+    }
+
+    fn segment(&self, base: usize) -> u32 {
+        match self {
+            Isbn::_10(isbn) => isbn.segment(base),
+            Isbn::_13(isbn) => isbn.segment(base),
+        }
+    }
+
+    fn group_prefix(&self, length: usize) -> u32 {
+        match self {
+            Isbn::_10(isbn) => isbn.group_prefix(length),
+            Isbn::_13(isbn) => isbn.group_prefix(length),
         }
     }
 }
