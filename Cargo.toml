@@ -9,7 +9,7 @@ edition = "2018"
 
 [build-dependencies]
 codegen = "0.1"
-roxmltree = "0.13.0"
+roxmltree = "0.14.1"
 
 [dependencies]
 arrayvec = { version = "0.7.1", default-features = false }

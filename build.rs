@@ -173,8 +173,9 @@ fn main() {
     let mut f = File::open("./isbn-ranges/RangeMessage.xml").unwrap();
     let mut text = String::new();
     f.read_to_string(&mut text).unwrap();
-
-    let range_message = Document::parse(&text).unwrap();
+    let mut options = roxmltree::ParsingOptions::default();
+    options.allow_dtd = true;
+    let range_message = Document::parse_with_options(&text, options).unwrap();
     let ean_ucc_groups = range_message
         .descendants()
         .filter(|d| d.tag_name().name() == "EAN.UCC")
