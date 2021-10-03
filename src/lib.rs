@@ -49,9 +49,9 @@ trait IsbnObject {
         Isbn::get_ean_ucc_group(self.prefix_element(), self.segment(0))
     }
 
-    fn hyphenate_with(&self, hyphen_at: [usize; 2]) -> ArrayString<[u8; 17]>;
+    fn hyphenate_with(&self, hyphen_at: [usize; 2]) -> ArrayString<17>;
 
-    fn trait_hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
+    fn trait_hyphenate(&self) -> Result<ArrayString<17>, IsbnError> {
         let registration_group_segment_length = self.ean_ucc_group()?.segment_length;
         let registrant_segment_length = Isbn::get_registration_group(
             self.prefix_element(),
@@ -126,7 +126,7 @@ impl Isbn {
     /// # Errors
     /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
     /// returned.
-    pub fn hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
+    pub fn hyphenate(&self) -> Result<ArrayString<17>, IsbnError> {
         match self {
             Isbn::_10(ref c) => c.hyphenate(),
             Isbn::_13(ref c) => c.hyphenate(),
@@ -207,7 +207,7 @@ pub struct Isbn10 {
 
 impl IsbnObject for Isbn10 {
     /// Applies two hyphens in the middle.
-    fn hyphenate_with(&self, hyphen_at: [usize; 2]) -> ArrayString<[u8; 17]> {
+    fn hyphenate_with(&self, hyphen_at: [usize; 2]) -> ArrayString<17> {
         let mut hyphenated = ArrayString::new();
 
         for (i, &digit) in self.digits[0..9].iter().enumerate() {
@@ -319,7 +319,7 @@ impl Isbn10 {
     /// # Errors
     /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
     /// returned.
-    pub fn hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
+    pub fn hyphenate(&self) -> Result<ArrayString<17>, IsbnError> {
         self.trait_hyphenate()
     }
 
@@ -341,7 +341,7 @@ impl Isbn10 {
 
 impl fmt::Display for Isbn10 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut s = ArrayString::<[u8; 10]>::new();
+        let mut s = ArrayString::<10>::new();
         self.digits[0..9]
             .iter()
             .for_each(|&digit| s.push(convert_isbn_body(digit)));
@@ -370,7 +370,7 @@ pub struct Isbn13 {
 }
 
 impl IsbnObject for Isbn13 {
-    fn hyphenate_with(&self, hyphen_at: [usize; 2]) -> ArrayString<[u8; 17]> {
+    fn hyphenate_with(&self, hyphen_at: [usize; 2]) -> ArrayString<17> {
         let mut hyphenated = ArrayString::new();
 
         for &digit in &self.digits[0..3] {
@@ -464,7 +464,7 @@ impl Isbn13 {
     /// # Errors
     /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
     /// returned.
-    pub fn hyphenate(&self) -> Result<ArrayString<[u8; 17]>, IsbnError> {
+    pub fn hyphenate(&self) -> Result<ArrayString<17>, IsbnError> {
         self.trait_hyphenate()
     }
 
@@ -486,7 +486,7 @@ impl Isbn13 {
 
 impl fmt::Display for Isbn13 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut s = ArrayString::<[u8; 13]>::new();
+        let mut s = ArrayString::<13>::new();
         self.digits
             .iter()
             .for_each(|&digit| s.push(convert_isbn_body(digit)));
@@ -571,7 +571,7 @@ impl From<CapacityError<u8>> for IsbnError {
 
 #[derive(Debug, Clone)]
 struct Parser {
-    digits: ArrayVec<[u8; 13]>,
+    digits: ArrayVec<u8, 13>,
 }
 
 impl Parser {
