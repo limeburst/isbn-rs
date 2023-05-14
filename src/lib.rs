@@ -499,25 +499,15 @@ impl Parser {
     }
 
     fn read_isbn13(&mut self) -> Result<Isbn13, IsbnError> {
-        let check_digit = Isbn13::calculate_check_digit(&self.digits);
-        if check_digit == *self.digits.last().unwrap() {
-            let d = &self.digits;
-            Isbn13::new(
-                d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12],
-            )
-        } else {
-            Err(IsbnError::InvalidDigit)
-        }
+        let d = &self.digits;
+        Isbn13::new(
+            d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12],
+        )
     }
 
     fn read_isbn10(&mut self) -> Result<Isbn10, IsbnError> {
-        let check_digit = Isbn10::calculate_check_digit(&self.digits);
-        if check_digit == *self.digits.last().unwrap() {
-            let d = &self.digits;
-            Isbn10::new(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9])
-        } else {
-            Err(IsbnError::InvalidDigit)
-        }
+        let d = &self.digits;
+        Isbn10::new(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9])
     }
 }
 
