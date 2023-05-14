@@ -499,25 +499,15 @@ impl Parser {
     }
 
     fn read_isbn13(&mut self) -> Result<Isbn13, IsbnError> {
-        let check_digit = Isbn13::calculate_check_digit(&self.digits);
-        if check_digit == *self.digits.last().unwrap() {
-            let d = &self.digits;
-            Isbn13::new(
-                d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12],
-            )
-        } else {
-            Err(IsbnError::InvalidDigit)
-        }
+        let d = &self.digits;
+        Isbn13::new(
+            d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12],
+        )
     }
 
     fn read_isbn10(&mut self) -> Result<Isbn10, IsbnError> {
-        let check_digit = Isbn10::calculate_check_digit(&self.digits);
-        if check_digit == *self.digits.last().unwrap() {
-            let d = &self.digits;
-            Isbn10::new(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9])
-        } else {
-            Err(IsbnError::InvalidDigit)
-        }
+        let d = &self.digits;
+        Isbn10::new(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9])
     }
 }
 
@@ -531,7 +521,7 @@ mod tests {
         assert!(Isbn::from_str("0-306-40615-2").is_ok());
 
         // Wikipedia ISBN-10 check digit calculation invalid example
-        assert!(Isbn::from_str("99999-999-9-X").is_err());
+        assert_eq!(Isbn::from_str("99999-999-9-X"), Err(IsbnError::InvalidChecksum));
 
         // Wikipedia Registrant element examples
         assert!(Isbn::from_str("99921-58-10-7").is_ok());
@@ -554,5 +544,8 @@ mod tests {
 
         // Wikipedia ISBN-13 check digit calculation example
         assert!(Isbn13::from_str("978-0-306-40615-7").is_ok());
+
+        // Same example but with an invalid checksum
+        assert_eq!(Isbn::from_str("978-0-306-40615-6"), Err(IsbnError::InvalidChecksum));
     }
 }
