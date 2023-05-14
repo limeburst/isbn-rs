@@ -521,7 +521,7 @@ mod tests {
         assert!(Isbn::from_str("0-306-40615-2").is_ok());
 
         // Wikipedia ISBN-10 check digit calculation invalid example
-        assert!(Isbn::from_str("99999-999-9-X").is_err());
+        assert_eq!(Isbn::from_str("99999-999-9-X"), Err(IsbnError::InvalidChecksum));
 
         // Wikipedia Registrant element examples
         assert!(Isbn::from_str("99921-58-10-7").is_ok());
