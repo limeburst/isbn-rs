@@ -544,5 +544,8 @@ mod tests {
 
         // Wikipedia ISBN-13 check digit calculation example
         assert!(Isbn13::from_str("978-0-306-40615-7").is_ok());
+
+        // Same example but with an invalid checksum
+        assert_eq!(Isbn::from_str("978-0-306-40615-6"), Err(IsbnError::InvalidChecksum));
     }
 }
