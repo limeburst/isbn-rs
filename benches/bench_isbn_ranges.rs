@@ -4,7 +4,7 @@ extern crate test;
 use test::Bencher;
 
 use core::hint::black_box;
-use isbn2::*;
+use isbn::*;
 use std::str::FromStr;
 
 fn open_range() -> IsbnRange {

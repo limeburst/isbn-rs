@@ -285,10 +285,10 @@ impl IsbnRange {
     /// current. Up-to-date ISBN ranges can be downloaded from the following
     /// sources:
     /// * https://www.isbn-international.org/export_rangemessage.xml
-    /// * https://github.com/philippeitis/isbn-ranges/blob/master/RangeMessage.xml
+    /// * https://github.com/limeburst/isbn-ranges/blob/main/RangeMessage.xml
     ///
     /// ```
-    /// use isbn2::{Isbn, Isbn10, Isbn13, IsbnRange};
+    /// use isbn::{Isbn, Isbn10, Isbn13, IsbnRange};
     ///
     /// let isbn_ranges = IsbnRange::from_path("isbn-ranges/RangeMessage.xml").unwrap();
     /// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
@@ -308,10 +308,10 @@ impl IsbnRange {
     /// current. Up-to-date ISBN ranges can be downloaded from the following
     /// sources:
     /// * https://www.isbn-international.org/export_rangemessage.xml
-    /// * https://github.com/philippeitis/isbn-ranges/blob/master/RangeMessage.xml
+    /// * https://github.com/limeburst/isbn-ranges/blob/main/RangeMessage.xml
     ///
     /// ```
-    /// use isbn2::{Isbn, Isbn10, Isbn13, IsbnRange};
+    /// use isbn::{Isbn, Isbn10, Isbn13, IsbnRange};
     /// use std::io::BufReader;
     /// use std::fs::File;
     ///
@@ -400,7 +400,7 @@ impl IsbnRange {
     /// * Check digit
     ///
     /// ```
-    /// use isbn2::{Isbn, Isbn10, Isbn13, IsbnRange};
+    /// use isbn::{Isbn, Isbn10, Isbn13, IsbnRange};
     ///
     /// let isbn_ranges = IsbnRange::from_path("isbn-ranges/RangeMessage.xml").unwrap();
     ///
@@ -448,7 +448,7 @@ impl IsbnRange {
     /// Retrieve the name of the registration group.
     ///
     /// ```
-    /// use isbn2::{Isbn, Isbn10, Isbn13, IsbnRange};
+    /// use isbn::{Isbn, Isbn10, Isbn13, IsbnRange};
     ///
     /// let isbn_ranges = IsbnRange::from_path("isbn-ranges/RangeMessage.xml").unwrap();
     ///

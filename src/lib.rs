@@ -3,7 +3,7 @@
 //! # Examples
 //!
 //! ```
-//! use isbn2::{Isbn10, Isbn13};
+//! use isbn::{Isbn10, Isbn13};
 //!
 //! let isbn_10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
 //! assert_eq!(isbn_10.hyphenate().unwrap().as_str(), "89-6626-126-4");
@@ -90,7 +90,7 @@ trait IsbnObject {
 /// # Examples
 ///
 /// ```
-/// use isbn2::{Isbn, Isbn10, Isbn13};
+/// use isbn::{Isbn, Isbn10, Isbn13};
 ///
 /// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
 /// let isbn_13 = Isbn::_13(Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap());
@@ -115,7 +115,7 @@ impl Isbn {
     /// * Check digit
     ///
     /// ```
-    /// use isbn2::{Isbn, Isbn10, Isbn13};
+    /// use isbn::{Isbn, Isbn10, Isbn13};
     ///
     /// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
     /// let isbn_13 = Isbn::_13(Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap());
@@ -136,7 +136,7 @@ impl Isbn {
     /// Retrieve the name of the registration group.
     ///
     /// ```
-    /// use isbn2::{Isbn, Isbn10, Isbn13};
+    /// use isbn::{Isbn, Isbn10, Isbn13};
     ///
     /// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
     /// let isbn_13 = Isbn::_13(Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap());
@@ -161,7 +161,7 @@ impl Isbn {
 /// # Examples
 ///
 /// ```
-/// use isbn2::{Isbn, Isbn10, Isbn13};
+/// use isbn::{Isbn, Isbn10, Isbn13};
 ///
 /// let isbn_10 = Isbn::_10(Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap());
 /// let isbn_13 = Isbn::_13(Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap());
@@ -290,7 +290,7 @@ impl Isbn10 {
     /// # Examples
     ///
     /// ```
-    /// use isbn2::Isbn10;
+    /// use isbn::Isbn10;
     ///
     /// let isbn10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
     /// ```
@@ -311,7 +311,7 @@ impl Isbn10 {
     /// Convert ISBN-13 to ISBN-10, if applicable.
     ///
     /// ```
-    /// use isbn2::{Isbn10, Isbn13};
+    /// use isbn::{Isbn10, Isbn13};
     ///
     /// let isbn_13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
     /// assert_eq!(Isbn10::try_from(isbn_13), "1-4920-6766-0".parse());
@@ -352,7 +352,7 @@ impl Isbn10 {
     /// * Check digit
     ///
     /// ```
-    /// use isbn2::Isbn10;
+    /// use isbn::Isbn10;
     ///
     /// let isbn_10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
     /// assert_eq!(isbn_10.hyphenate().unwrap().as_str(), "89-6626-126-4");
@@ -367,7 +367,7 @@ impl Isbn10 {
     /// Retrieve the name of the registration group.
     ///
     /// ```
-    /// use isbn2::Isbn10;
+    /// use isbn::Isbn10;
     ///
     /// let isbn_10 = Isbn10::new([8, 9, 6, 6, 2, 6, 1, 2, 6, 4]).unwrap();
     /// assert_eq!(isbn_10.registration_group(), Ok("Korea, Republic"));
@@ -458,7 +458,7 @@ impl Isbn13 {
     /// # Examples
     ///
     /// ```
-    /// use isbn2::Isbn13;
+    /// use isbn::Isbn13;
     ///
     /// let isbn13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
     /// ```
@@ -497,7 +497,7 @@ impl Isbn13 {
     /// * Check digit
     ///
     /// ```
-    /// use isbn2::Isbn13;
+    /// use isbn::Isbn13;
     ///
     /// let isbn_13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
     /// assert_eq!(isbn_13.hyphenate().unwrap().as_str(), "978-1-4920-6766-5");
@@ -512,7 +512,7 @@ impl Isbn13 {
     /// Retrieve the name of the registration group.
     ///
     /// ```
-    /// use isbn2::Isbn13;
+    /// use isbn::Isbn13;
     ///
     /// let isbn_13 = Isbn13::new([9, 7, 8, 1, 4, 9, 2, 0, 6, 7, 6, 6, 5]).unwrap();
     /// assert_eq!(isbn_13.registration_group(), Ok("English language"));
