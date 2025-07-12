@@ -98,7 +98,7 @@ trait IsbnObject {
 /// assert_eq!("89-6626-126-4".parse(), Ok(isbn_10));
 /// assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
 /// ```
-#[derive(Debug, PartialEq, Clone, Eq)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Isbn {
     _10(Isbn10),
