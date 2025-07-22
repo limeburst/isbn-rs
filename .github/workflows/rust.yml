@@ -32,7 +32,7 @@ jobs:
         toolchain: ${{ matrix.rust }}
         override: true
     - name: Build
-      run: cargo test --verbose --features runtime-ranges
+      run: cargo test --verbose --features runtime-ranges,serialize
   fmt:
     runs-on: ubuntu-latest
     strategy:
@@ -60,4 +60,4 @@ jobs:
         toolchain: stable
         override: true
     - name: Run clippy
-      run: rustup component add clippy && cargo clippy --features runtime-ranges
+      run: rustup component add clippy && cargo clippy --features runtime-ranges,serialize
