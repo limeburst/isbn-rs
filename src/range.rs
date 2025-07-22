@@ -413,7 +413,10 @@ impl IsbnRange {
     /// # Errors
     /// If the ISBN is not valid, as determined by the current ISBN rules, an error will be
     /// returned.
-    pub fn hyphenate<'a, I: Into<IsbnRef<'a>>>(&self, isbn: I) -> Result<ArrayString<17>, IsbnError> {
+    pub fn hyphenate<'a, I: Into<IsbnRef<'a>>>(
+        &self,
+        isbn: I,
+    ) -> Result<ArrayString<17>, IsbnError> {
         match isbn.into() {
             IsbnRef::_10(isbn) => self.hyphenate_isbn(isbn),
             IsbnRef::_13(isbn) => self.hyphenate_isbn(isbn),
@@ -462,7 +465,10 @@ impl IsbnRange {
     /// # Errors
     /// If the ISBN is not valid, as determined by `self`, an error will be
     /// returned.
-    pub fn get_registration_group<'a, I: Into<IsbnRef<'a>>>(&self, isbn: I) -> Result<&str, IsbnError> {
+    pub fn get_registration_group<'a, I: Into<IsbnRef<'a>>>(
+        &self,
+        isbn: I,
+    ) -> Result<&str, IsbnError> {
         match isbn.into() {
             IsbnRef::_10(isbn) => self.get_registration_group_isbn(isbn),
             IsbnRef::_13(isbn) => self.get_registration_group_isbn(isbn),
@@ -508,8 +514,8 @@ impl IsbnRange {
 
 #[cfg(test)]
 mod test {
-    use crate::Isbn;
     use super::*;
+    use crate::Isbn;
 
     #[test]
     fn test_isbn_range_opens() {
