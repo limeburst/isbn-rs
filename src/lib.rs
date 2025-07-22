@@ -170,7 +170,6 @@ impl Isbn {
 /// assert_eq!("978-1-4920-6766-5".parse(), Ok(isbn_13));
 /// ```
 #[derive(Debug, PartialEq, Clone, Eq)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum IsbnRef<'a> {
     _10(&'a Isbn10),
     _13(&'a Isbn13),
