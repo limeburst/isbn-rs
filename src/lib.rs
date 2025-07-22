@@ -180,7 +180,7 @@ impl<'a> From<&'a Isbn> for IsbnRef<'a> {
     fn from(isbn: &'a Isbn) -> Self {
         match isbn {
             Isbn::_10(isbn) => isbn.into(),
-            Isbn::_13(isbn) => isbn.into()
+            Isbn::_13(isbn) => isbn.into(),
         }
     }
 }
