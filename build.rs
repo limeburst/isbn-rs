@@ -9,8 +9,7 @@ use roxmltree::{Document, Node};
 const ALLOW_LINTS: &str = r###"
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::match_same_arms)]
-#[allow(clippy::too_many_lines)]
-"###;
+#[allow(clippy::too_many_lines)]"###;
 
 /// EAN.UCC prefix or registration group.
 struct Group {
@@ -173,8 +172,7 @@ fn main() {
     let mut f = File::open("./isbn-ranges/RangeMessage.xml").unwrap();
     let mut text = String::new();
     f.read_to_string(&mut text).unwrap();
-    let mut options = roxmltree::ParsingOptions::default();
-    options.allow_dtd = true;
+    let options = roxmltree::ParsingOptions { allow_dtd: true };
     let range_message = Document::parse_with_options(&text, options).unwrap();
     let ean_ucc_groups = range_message
         .descendants()
