@@ -5,7 +5,7 @@ authors = ["Jihyeok Seo <ji@hyeok.org>", "Philippe Solodov <solop1906@gmail.com>
 description = "A library for handling ISBNs."
 license = "MIT"
 repository = "https://github.com/limeburst/isbn-rs"
-edition = "2018"
+edition = "2021"
 
 [build-dependencies]
 codegen = "0.1"
