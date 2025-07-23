@@ -60,4 +60,4 @@ jobs:
         toolchain: stable
         override: true
     - name: Run clippy
-      run: rustup component add clippy && cargo clippy --features runtime-ranges,serialize
+      run: rustup component add clippy && cargo clippy --features runtime-ranges,serialize -- -D warnings

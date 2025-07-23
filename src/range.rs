@@ -74,7 +74,7 @@ fn read_xml_tag<B: BufRead>(
     };
     buf.clear();
     let res = match reader.read_event(buf)? {
-        Event::Text(e) => e.unescape_and_decode(&reader)?,
+        Event::Text(e) => e.unescape_and_decode(reader)?,
         _ => return Err(IsbnRangeError::WrongXmlBody),
     };
     match reader.read_event(buf)? {
@@ -154,7 +154,8 @@ impl Segment {
                     if length.len() != 1 {
                         return Err(IsbnRangeError::BadLengthString);
                     }
-                    let length = usize::from_str_radix(&length, 10)
+                    let length = length
+                        .parse::<usize>()
                         .map_err(|_| IsbnRangeError::BadLengthString)?;
                     if length > 7 {
                         return Err(IsbnRangeError::LengthTooLarge);
@@ -488,7 +489,7 @@ impl IsbnRange {
                 isbn.group_prefix(registration_group_segment_length),
             ))
             .ok_or(IsbnError::InvalidGroup)?;
-        Ok(&segment
+        Ok(segment
             .group(isbn.segment(registration_group_segment_length))?
             .name)
     }
