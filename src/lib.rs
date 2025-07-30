@@ -622,7 +622,7 @@ impl Parser {
         for c in s.as_ref().chars() {
             match c {
                 '-' | ' ' => {}
-                'X' => {
+                'X' | 'x' => {
                     if digits.len() == 9 {
                         has_x = true;
                         digits.push(10);
@@ -701,6 +701,30 @@ mod tests {
         assert!(Isbn::from_str("0-85131-041-9").is_ok());
         assert!(Isbn::from_str("0-943396-04-2").is_ok());
         assert!(Isbn::from_str("0-9752298-0-X").is_ok());
+
+        // Lowercase X is allowed.
+        assert!(Isbn::from_str("0-9752298-0-x").is_ok());
+    }
+
+    #[test]
+    fn test_lowercase_x_check_digit() {
+        // Test lowercase 'x' check digit is properly handled
+        let isbn_lowercase = Isbn::from_str("0-9752298-0-x").unwrap();
+        let isbn_uppercase = Isbn::from_str("0-9752298-0-X").unwrap();
+        
+        // Both should be equal
+        assert_eq!(isbn_lowercase, isbn_uppercase);
+        
+        // Both should hyphenate successfully
+        assert!(isbn_lowercase.hyphenate().is_ok());
+        assert!(isbn_uppercase.hyphenate().is_ok());
+        
+        // Test with different valid ISBN-10 ending in x/X
+        assert!(Isbn::from_str("0-8044-2957-x").is_ok());
+        assert_eq!(
+            Isbn::from_str("0-8044-2957-x").unwrap(),
+            Isbn::from_str("0-8044-2957-X").unwrap()
+        );
     }
 
     #[test]
