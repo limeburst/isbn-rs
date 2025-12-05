@@ -21,3 +21,7 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 [features]
 runtime-ranges = ["quick-xml", "indexmap"]
 serialize = ["serde"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

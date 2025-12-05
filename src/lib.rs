@@ -18,6 +18,7 @@
 //!
 //! [International Standard Book Number]: https://www.isbn-international.org/
 #![cfg_attr(not(feature = "runtime-ranges"), no_std)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(clippy::missing_errors_doc)]
 #![deny(clippy::if_not_else)]
 
