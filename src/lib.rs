@@ -46,7 +46,7 @@ struct Group<'a> {
 }
 
 trait IsbnObject {
-    fn ean_ucc_group(&self) -> Result<Group, IsbnError> {
+    fn ean_ucc_group(&self) -> Result<Group<'_>, IsbnError> {
         Isbn::get_ean_ucc_group(self.prefix_element(), self.segment(0))
     }
 
@@ -712,14 +712,14 @@ mod tests {
         // Test lowercase 'x' check digit is properly handled
         let isbn_lowercase = Isbn::from_str("0-9752298-0-x").unwrap();
         let isbn_uppercase = Isbn::from_str("0-9752298-0-X").unwrap();
-        
+
         // Both should be equal
         assert_eq!(isbn_lowercase, isbn_uppercase);
-        
+
         // Both should hyphenate successfully
         assert!(isbn_lowercase.hyphenate().is_ok());
         assert!(isbn_uppercase.hyphenate().is_ok());
-        
+
         // Test with different valid ISBN-10 ending in x/X
         assert!(Isbn::from_str("0-8044-2957-x").is_ok());
         assert_eq!(

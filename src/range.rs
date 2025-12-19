@@ -187,7 +187,7 @@ impl Segment {
         Ok(Segment { name, ranges })
     }
 
-    fn group(&self, segment: u32) -> Result<Group, IsbnError> {
+    fn group(&self, segment: u32) -> Result<Group<'_>, IsbnError> {
         for ((start, stop), length) in &self.ranges {
             if segment >= *start && segment < *stop {
                 let segment_length = usize::from(length.ok_or(IsbnError::UndefinedRange)?);
