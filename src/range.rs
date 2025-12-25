@@ -39,6 +39,7 @@ pub enum IsbnRangeError {
     BadRange,
     NoDashInRange,
     Xml(quick_xml::Error),
+    Encoding(quick_xml::encoding::EncodingError),
     WrongXmlStart,
     MissingXmlStart,
     WrongXmlBody,
@@ -53,6 +54,12 @@ impl From<quick_xml::Error> for IsbnRangeError {
     }
 }
 
+impl From<quick_xml::encoding::EncodingError> for IsbnRangeError {
+    fn from(e: quick_xml::encoding::EncodingError) -> Self {
+        Self::Encoding(e)
+    }
+}
+
 impl From<std::io::Error> for IsbnRangeError {
     fn from(e: std::io::Error) -> Self {
         Self::FileError(e)
@@ -64,22 +71,22 @@ fn read_xml_tag<B: BufRead>(
     buf: &mut Vec<u8>,
     name: &[u8],
 ) -> Result<String, IsbnRangeError> {
-    match reader.read_event(buf)? {
+    match reader.read_event_into(buf)? {
         Event::Start(e) => {
-            if e.name() != name {
+            if e.name().as_ref() != name {
                 return Err(IsbnRangeError::WrongXmlStart);
             }
         }
         _ => return Err(IsbnRangeError::MissingXmlStart),
     };
     buf.clear();
-    let res = match reader.read_event(buf)? {
-        Event::Text(e) => e.unescape_and_decode(reader)?,
+    let res = match reader.read_event_into(buf)? {
+        Event::Text(e) => e.decode()?.to_string(),
         _ => return Err(IsbnRangeError::WrongXmlBody),
     };
-    match reader.read_event(buf)? {
+    match reader.read_event_into(buf)? {
         Event::End(e) => {
-            if e.name() != name {
+            if e.name().as_ref() != name {
                 return Err(IsbnRangeError::WrongXmlEnd);
             }
         }
@@ -94,8 +101,8 @@ fn read_xml_start<B: BufRead>(
     buf: &mut Vec<u8>,
     name: &[u8],
 ) -> Result<bool, IsbnRangeError> {
-    if let Event::Start(e) = reader.read_event(buf)? {
-        let res = e.name() == name;
+    if let Event::Start(e) = reader.read_event_into(buf)? {
+        let res = e.name().as_ref() == name;
         buf.clear();
         Ok(res)
     } else {
@@ -112,9 +119,9 @@ impl Segment {
         let name = read_xml_tag(reader, buf, b"Agency")?;
         let mut ranges = Vec::new();
 
-        match reader.read_event(buf)? {
+        match reader.read_event_into(buf)? {
             Event::Start(e) => {
-                if e.name() != b"Rules" {
+                if e.name().as_ref() != b"Rules" {
                     return Err(IsbnRangeError::WrongXmlStart);
                 }
             }
@@ -123,14 +130,14 @@ impl Segment {
         buf.clear();
 
         loop {
-            match reader.read_event(buf)? {
+            match reader.read_event_into(buf)? {
                 Event::Start(e) => {
-                    if e.name() != b"Rule" {
+                    if e.name().as_ref() != b"Rule" {
                         return Err(IsbnRangeError::WrongXmlStart);
                     }
                 }
                 Event::End(e) => {
-                    if e.name() == b"Rules" {
+                    if e.name().as_ref() == b"Rules" {
                         break;
                     }
                 }
@@ -164,9 +171,9 @@ impl Segment {
                 },
             ));
 
-            match reader.read_event(buf)? {
+            match reader.read_event_into(buf)? {
                 Event::End(e) => {
-                    if e.name() != b"Rule" {
+                    if e.name().as_ref() != b"Rule" {
                         return Err(IsbnRangeError::WrongXmlEnd);
                     }
                 }
@@ -175,8 +182,8 @@ impl Segment {
             buf.clear();
         }
 
-        match reader.read_event(buf)? {
-            Event::End(e) => match e.name() {
+        match reader.read_event_into(buf)? {
+            Event::End(e) => match e.name().as_ref() {
                 b"EAN.UCC" | b"Group" => {}
                 _ => return Err(IsbnRangeError::WrongXmlEnd),
             },
@@ -209,13 +216,13 @@ impl IsbnRange {
         buf.clear();
         let mut res = IndexMap::new();
         loop {
-            match reader.read_event(buf)? {
+            match reader.read_event_into(buf)? {
                 Event::Start(e) => {
-                    if e.name() != b"EAN.UCC" {
+                    if e.name().as_ref() != b"EAN.UCC" {
                         return Err(IsbnRangeError::NoEanUccPrefix);
                     }
                 }
-                Event::End(e) if e.name() == b"EAN.UCCPrefixes" => {
+                Event::End(e) if e.name().as_ref() == b"EAN.UCCPrefixes" => {
                     return Ok(res);
                 }
                 _ => return Err(IsbnRangeError::WrongXmlEnd),
@@ -242,13 +249,13 @@ impl IsbnRange {
         buf.clear();
         let mut res = IndexMap::new();
         loop {
-            match reader.read_event(buf)? {
+            match reader.read_event_into(buf)? {
                 Event::Start(e) => {
-                    if e.name() != b"Group" {
+                    if e.name().as_ref() != b"Group" {
                         return Err(IsbnRangeError::NoGroup);
                     }
                 }
-                Event::End(e) if e.name() == b"RegistrationGroups" => {
+                Event::End(e) if e.name().as_ref() == b"RegistrationGroups" => {
                     return Ok(res);
                 }
                 _ => return Err(IsbnRangeError::WrongXmlEnd),
@@ -329,7 +336,7 @@ impl IsbnRange {
     /// If the RangeMessage is in an unexpected format or does not exist, an error will be returned.
     pub fn from_reader<B: BufRead>(reader: B) -> Result<Self, IsbnRangeError> {
         let mut reader = Reader::from_reader(reader);
-        reader.trim_text(true);
+        reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
         loop {
             if read_xml_start(&mut reader, &mut buf, b"ISBNRangeMessage")? {
@@ -345,15 +352,15 @@ impl IsbnRange {
         while !fields.is_empty() {
             let mut buf1 = Vec::new();
             let mut buf2 = Vec::new();
-            let e1 = reader.read_event(&mut buf)?;
-            let e2 = reader.read_event(&mut buf1)?;
-            let e3 = reader.read_event(&mut buf2)?;
+            let e1 = reader.read_event_into(&mut buf)?;
+            let e2 = reader.read_event_into(&mut buf1)?;
+            let e3 = reader.read_event_into(&mut buf2)?;
             match (e1, e2, e3) {
                 (Event::Start(es), Event::Text(et), Event::End(ee)) => {
                     while let Some(name) = fields.pop() {
-                        if es.name() == name {
-                            vals.push(Some(et.unescape_and_decode(&reader)?));
-                            if ee.name() != name {
+                        if es.name().as_ref() == name {
+                            vals.push(Some(et.decode()?.to_string()));
+                            if ee.name().as_ref() != name {
                                 return Err(IsbnRangeError::WrongXmlEnd);
                             }
                             break;
