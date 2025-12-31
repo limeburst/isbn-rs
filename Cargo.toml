@@ -9,7 +9,7 @@ edition = "2021"
 rust-version = "1.68.0" 
 
 [build-dependencies]
-codegen = "0.1"
+codegen = "0.3.0"
 roxmltree = "0.14.1"
 
 [dependencies]
