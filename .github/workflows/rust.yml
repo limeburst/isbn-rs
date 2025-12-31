@@ -1,6 +1,5 @@
 name: Rust
 on:
-  workflow_dispatch:
   push:
     paths:
       - "**/*.rs"
@@ -42,7 +41,8 @@ jobs:
         with:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-        components: rustfmt
+        with:
+          components: rustfmt
       - name: Formatting
         run: cargo fmt -- --check
 
@@ -55,6 +55,7 @@ jobs:
         with:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-        components: clippy
+        with:
+          components: rustfmt
       - name: Run clippy
         run: cargo clippy --features runtime-ranges,serialize -- -D warnings
