@@ -172,7 +172,10 @@ fn main() {
     let mut f = File::open("./isbn-ranges/RangeMessage.xml").unwrap();
     let mut text = String::new();
     f.read_to_string(&mut text).unwrap();
-    let options = roxmltree::ParsingOptions { allow_dtd: true };
+    let options = roxmltree::ParsingOptions {
+        allow_dtd: true,
+        ..Default::default()
+    };
     let range_message = Document::parse_with_options(&text, options).unwrap();
     let ean_ucc_groups = range_message
         .descendants()
