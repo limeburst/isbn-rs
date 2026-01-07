@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use arrayvec::ArrayString;
 use indexmap::IndexMap;
-use quick_xml::{events::Event, Reader};
+use quick_xml::{Reader, events::Event};
 
 use crate::{Group, IsbnError, IsbnObject, IsbnRef};
 
@@ -540,11 +540,15 @@ mod test {
     #[test]
     fn test_hyphenation() {
         let range = IsbnRange::from_path("./isbn-ranges/RangeMessage.xml").unwrap();
-        assert!(range
-            .hyphenate(&Isbn::from_str("0-9752298-0-X").unwrap())
-            .is_ok());
-        assert!(range
-            .hyphenate(&Isbn::from_str("978-3-16-148410-0").unwrap())
-            .is_ok());
+        assert!(
+            range
+                .hyphenate(&Isbn::from_str("0-9752298-0-X").unwrap())
+                .is_ok()
+        );
+        assert!(
+            range
+                .hyphenate(&Isbn::from_str("978-3-16-148410-0").unwrap())
+                .is_ok()
+        );
     }
 }

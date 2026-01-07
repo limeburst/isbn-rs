@@ -129,8 +129,8 @@ impl Isbn {
     /// returned.
     pub fn hyphenate(&self) -> Result<ArrayString<17>, IsbnError> {
         match self {
-            Isbn::_10(ref c) => c.hyphenate(),
-            Isbn::_13(ref c) => c.hyphenate(),
+            Isbn::_10(c) => c.hyphenate(),
+            Isbn::_13(c) => c.hyphenate(),
         }
     }
 
@@ -151,8 +151,8 @@ impl Isbn {
     /// returned.
     pub fn registration_group(&self) -> Result<&str, IsbnError> {
         match self {
-            Isbn::_10(ref c) => c.registration_group(),
-            Isbn::_13(ref c) => c.registration_group(),
+            Isbn::_10(c) => c.registration_group(),
+            Isbn::_13(c) => c.registration_group(),
         }
     }
 }
@@ -200,8 +200,8 @@ impl<'a> From<&'a Isbn13> for IsbnRef<'a> {
 impl fmt::Display for Isbn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Isbn::_10(ref c) => c.fmt(f),
-            Isbn::_13(ref c) => c.fmt(f),
+            Isbn::_10(c) => c.fmt(f),
+            Isbn::_13(c) => c.fmt(f),
         }
     }
 }
@@ -337,11 +337,7 @@ impl Isbn10 {
             .map(|(i, &d)| d as usize * (10 - i))
             .sum();
         let sum_m = (sum % 11) as u8;
-        if sum_m == 0 {
-            0
-        } else {
-            11 - sum_m
-        }
+        if sum_m == 0 { 0 } else { 11 - sum_m }
     }
 
     /// Hyphenate an ISBN-10 into its parts:
@@ -481,11 +477,7 @@ impl Isbn13 {
             sum += u16::from(digits[i * 2] + 3 * digits[i * 2 + 1]);
         }
         let sum_m = (sum % 10) as u8;
-        if sum_m == 0 {
-            0
-        } else {
-            10 - sum_m
-        }
+        if sum_m == 0 { 0 } else { 10 - sum_m }
     }
 
     /// Hyphenate an ISBN-13 into its parts:
@@ -731,10 +723,12 @@ mod tests {
     #[test]
     fn test_hyphens_no_panic() {
         assert!(Isbn::from_str("0-9752298-0-X").unwrap().hyphenate().is_ok());
-        assert!(Isbn::from_str("978-3-16-148410-0")
-            .unwrap()
-            .hyphenate()
-            .is_ok());
+        assert!(
+            Isbn::from_str("978-3-16-148410-0")
+                .unwrap()
+                .hyphenate()
+                .is_ok()
+        );
     }
 
     #[test]
