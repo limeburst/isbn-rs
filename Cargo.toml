@@ -6,11 +6,11 @@ description = "A library for handling ISBNs."
 license = "MIT"
 repository = "https://github.com/limeburst/isbn-rs"
 edition = "2021"
-rust-version = "1.82.0" 
+rust-version = "1.85.0"
 
 [build-dependencies]
 codegen = "0.3.0"
-roxmltree = "0.14.1"
+roxmltree = "0.21.1"
 
 [dependencies]
 arrayvec = { version = "0.7.1", default-features = false }
