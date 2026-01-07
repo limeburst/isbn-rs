@@ -31,7 +31,7 @@ jobs:
     - name: Update version and commit
       if: steps.check.outputs.changed == 'true'
       run: |
-        VERSION="0.7.$(date +%Y%m%d)"
+        VERSION="0.8.$(date +%Y%m%d)"
         sed -i "s/^version = .*/version = \"$VERSION\"/" Cargo.toml
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
