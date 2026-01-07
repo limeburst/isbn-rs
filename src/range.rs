@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::hash::RandomState;
 use std::io::{BufRead, BufReader};
 use std::num::NonZeroUsize;
 use std::path::Path;
@@ -20,8 +21,8 @@ pub struct IsbnRange {
     source: Option<String>,
     serial_number: Option<String>,
     date: String,
-    ean_ucc_group: IndexMap<u16, Segment>,
-    registration_group: IndexMap<(u16, u32), Segment>,
+    ean_ucc_group: IndexMap<u16, Segment, RandomState>,
+    registration_group: IndexMap<(u16, u32), Segment, RandomState>,
 }
 
 #[derive(Debug)]
@@ -212,9 +213,9 @@ impl IsbnRange {
     fn read_ean_ucc_group<B: BufRead>(
         reader: &mut Reader<B>,
         buf: &mut Vec<u8>,
-    ) -> Result<IndexMap<u16, Segment>, IsbnRangeError> {
+    ) -> Result<IndexMap<u16, Segment, RandomState>, IsbnRangeError> {
         buf.clear();
-        let mut res = IndexMap::new();
+        let mut res = IndexMap::with_hasher(RandomState::new());
         loop {
             match reader.read_event_into(buf)? {
                 Event::Start(e) => {
@@ -245,9 +246,9 @@ impl IsbnRange {
     fn read_registration_group<B: BufRead>(
         reader: &mut Reader<B>,
         buf: &mut Vec<u8>,
-    ) -> Result<IndexMap<(u16, u32), Segment>, IsbnRangeError> {
+    ) -> Result<IndexMap<(u16, u32), Segment, RandomState>, IsbnRangeError> {
         buf.clear();
-        let mut res = IndexMap::new();
+        let mut res = IndexMap::with_hasher(RandomState::new());
         loop {
             match reader.read_event_into(buf)? {
                 Event::Start(e) => {
