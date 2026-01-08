@@ -5,6 +5,6 @@ isbn
 
 A library for handling [International Standard Book Number], or ISBNs.
 
-[Try the demo](https://ji.hyeok.org/isbn-web/)
+[Try the WASM demo!](https://ji.hyeok.org/isbn-rs-wasm/)
 
 [International Standard Book Number]: https://www.isbn-international.org/
